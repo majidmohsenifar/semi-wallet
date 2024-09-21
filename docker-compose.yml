@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=semi_wallet_db
+    volumes:
+      - semi-wallet-db:/var/lib/postgresql/data
+    restart: always
+    ports: 
+      - 5432:5432
+
+  redis:
+    image: "redis:6.2.2"
+    ports:
+      - "127.0.0.1:6379:6379"
+
+volumes:
+    semi-wallet-db:
+
