@@ -2,16 +2,14 @@ use core::fmt;
 use std::error::Error;
 
 #[derive(Debug)]
-pub enum OrderError {
+pub enum PlanError {
     NotFound,
     Unknown,
-    PlanNotFound,
-    InvalidPaymentProvider,
 }
 
-impl Error for OrderError {}
+impl Error for PlanError {}
 
-impl fmt::Display for OrderError {
+impl fmt::Display for PlanError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "error")
     }

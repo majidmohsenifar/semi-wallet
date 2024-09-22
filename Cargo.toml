@@ -3,10 +3,25 @@ name = "semi-wallet"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+# We could use any path here, but we are following the community convention
+# We could specify a library name using the `name` field. If unspecified,
+# cargo will default to `package.name`, which is what we want.
+path = "src/lib.rs"
+
+# Notice the double square brackets: it's an array in TOML's syntax.
+# We can only have one library in a project, but we can have multiple binaries!
+[[bin]]
+path = "src/main.rs"
+name = "semi-wallet"
+
+
+
 [dependencies]
 axum = "0.7.5"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 config = "0.14.0"
-sqlx = { version = "0.8.2", features = ["runtime-tokio-rustls", "any", "postgres","migrate"] }
+chrono = {version = "0.4.38", features = ["serde"] }
+sqlx = { version = "0.8.2", features = ["runtime-tokio-rustls", "uuid", "chrono", "any", "postgres", "migrate"] }
 
