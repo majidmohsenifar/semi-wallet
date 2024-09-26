@@ -6,6 +6,7 @@ use crate::repository::{db::Repository, models::Payment};
 
 const PAYMENT_PROVIDER_STRIPE: &str = "STRIPE";
 const PAYMENT_PROVIDER_BITPAY: &str = "BITPAY";
+pub const EXPIRE_DURATION: i64 = 30; //30 min
 
 use super::{
     bitpay::{self, BitpayProvider},
@@ -16,6 +17,13 @@ use super::{
 pub struct CreatePaymentResult {
     pub payment: Payment,
     pub url: String,
+}
+
+pub struct MakePaymentParams {
+    pub amount: f64,
+    pub payment_id: i64,
+    pub order_id: i64,
+    pub extra_data: HashMap<String, String>,
 }
 
 pub struct MakePaymentResult {
@@ -67,8 +75,13 @@ enum PaymentHandler {
 }
 
 impl Service {
-    pub fn new(db: Pool<Postgres>, repo: Repository) -> Self {
-        let stripe = stripe::StripeProvider::new();
+    pub fn new(
+        db: Pool<Postgres>,
+        repo: Repository,
+        stripe_url: &str,
+        stripe_secret: &str,
+    ) -> Self {
+        let stripe = stripe::StripeProvider::new(stripe_url, stripe_secret);
         let bitpay = bitpay::BitpayProvider::new();
         let mut providers: HashMap<Provider, PaymentHandler> = HashMap::new();
         providers.insert(Provider::Stripe, PaymentHandler::Stripe(stripe));
@@ -108,9 +121,15 @@ impl Service {
         let payment = payment.unwrap();
 
         let payment_provider = self.providers.get(&params.payment_provider).unwrap();
+        let make_payment_params = MakePaymentParams {
+            payment_id: payment.id,
+            amount: params.amount,
+            order_id: params.order_id,
+            extra_data: HashMap::new(),
+        };
         let make_payment_result = match payment_provider {
-            PaymentHandler::Stripe(stripe) => stripe.make_payment(params),
-            PaymentHandler::Bitpay(bitpay) => bitpay.make_payment(params),
+            PaymentHandler::Stripe(stripe) => stripe.make_payment(make_payment_params).await,
+            PaymentHandler::Bitpay(bitpay) => bitpay.make_payment(make_payment_params).await,
         };
 
         if let Err(e) = make_payment_result {
@@ -120,6 +139,15 @@ impl Service {
         }
 
         let make_payment_result = make_payment_result.unwrap();
+        let update_payment_result = self
+            .repo
+            .update_payment_external_id(db_tx, payment.id, make_payment_result.external_id)
+            .await;
+        if let Err(e) = update_payment_result {
+            //TODO: we should log here and handle error better
+            println!("{:#?}", e);
+            return Err(PaymentError::Unknown);
+        }
 
         Ok(CreatePaymentResult {
             payment,

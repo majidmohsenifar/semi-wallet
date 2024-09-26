@@ -24,4 +24,5 @@ serde = { version = "1.0", features = ["derive"] }
 config = "0.14.0"
 chrono = {version = "0.4.38", features = ["serde"] }
 sqlx = { version = "0.8.2", features = ["runtime-tokio-rustls", "uuid", "chrono", "any", "postgres", "migrate"] }
+async-stripe = { version = "0.31", features = ["runtime-tokio-hyper"] }
 

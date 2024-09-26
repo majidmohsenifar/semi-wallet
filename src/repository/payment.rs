@@ -15,7 +15,6 @@ pub struct CreatePaymentArgs {
 impl Repository {
     pub async fn create_payment(
         &self,
-        //conn: A,
         conn: &mut PgConnection,
         args: CreatePaymentArgs,
     ) -> Result<Payment, sqlx::Error>
@@ -29,7 +28,7 @@ where {
             created_at,
             updated_at
             ) VALUS(
-            $1, $2, $3, $4, now(), now()
+            $1, $2, $3, $4, NOW(), NOW()
             ) RETURNING *",
         )
         .bind(args.user_id)
@@ -39,5 +38,25 @@ where {
         .fetch_one(&mut *conn)
         .await?;
         Ok(res)
+    }
+
+    pub async fn update_payment_external_id(
+        &self,
+        conn: &mut PgConnection,
+        payment_id: i64,
+        external_id: String,
+    ) -> Result<(), sqlx::Error>
+where {
+        sqlx::query(
+            "UPDATE payments
+            SET external_id = $2,
+             updated_at = NOW()
+            WHERE id = $1;",
+        )
+        .bind(payment_id)
+        .bind(external_id)
+        .execute(&mut *conn)
+        .await?;
+        Ok(())
     }
 }

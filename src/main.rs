@@ -13,7 +13,12 @@ async fn main() {
     let cfg = config::get_configuration().expect("cannot parse configuration");
     let repo = Repository::new();
     let db_pool = postgres::new_pg_pool(&cfg.db.dsn).await;
-    let payment_service = PaymentService::new(db_pool.clone(), repo.clone());
+    let payment_service = PaymentService::new(
+        db_pool.clone(),
+        repo.clone(),
+        &cfg.stripe.url,
+        &cfg.stripe.secret,
+    );
     let plan_service = PlanService::new(db_pool.clone(), repo.clone());
     let order_service =
         OrderService::new(db_pool.clone(), repo.clone(), plan_service, payment_service);

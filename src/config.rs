@@ -5,6 +5,7 @@ pub struct Settings {
     pub db: DbConfig,
     pub redis: RedisConfig,
     pub server: ServerConfig,
+    pub stripe: StripeConfig,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -20,6 +21,12 @@ pub struct RedisConfig {
 #[derive(serde::Deserialize, Clone, Debug)]
 pub struct ServerConfig {
     pub address: String,
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct StripeConfig {
+    pub url: String,
+    pub secret: String,
 }
 
 //TODO: why not associative func?
