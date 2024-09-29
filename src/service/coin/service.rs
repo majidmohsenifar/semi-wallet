@@ -1,5 +1,7 @@
 use sqlx::{Pool, Postgres};
 
+use tracing::error;
+
 use crate::repository::db::Repository;
 
 use super::error::CoinError;
@@ -25,7 +27,28 @@ impl Service {
         Service { db, repo }
     }
 
-    pub async fn coin_list(&self) -> Result<Vec<Coin>, CoinError> {
-        todo!("handle this later");
+    pub async fn coins_list(&self) -> Result<Vec<Coin>, CoinError> {
+        let res = self.repo.get_all_coins(&self.db).await;
+        if let Err(e) = res {
+            error!("cannot acquire db conn due to err {e}");
+            return Err(CoinError::Unexpected {
+                message: "cannot get coins from db".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error>,
+            });
+        }
+        let res = res.unwrap();
+        let mut coins = Vec::with_capacity(res.len());
+        for r in res {
+            coins.push(Coin {
+                id: r.id,
+                symbol: r.symbol,
+                name: r.name,
+                logo: r.logo,
+                network: r.network,
+                decimals: r.decimals,
+                description: r.description,
+            });
+        }
+        Ok(coins)
     }
 }

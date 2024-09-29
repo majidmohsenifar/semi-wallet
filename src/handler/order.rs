@@ -1,15 +1,11 @@
 use axum::{
     extract::{Query, State},
-    http::StatusCode,
     response::IntoResponse,
     Json,
 };
 
 use crate::{
-    service::order::{
-        error::OrderError,
-        service::{CreateOrderParams, OrderDetailParams},
-    },
+    service::order::service::{CreateOrderParams, OrderDetailParams},
     SharedState,
 };
 

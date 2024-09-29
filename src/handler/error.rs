@@ -26,7 +26,7 @@ impl IntoResponse for CoinError {
     fn into_response(self) -> axum::response::Response {
         let status_code = match self {
             Self::NotFound { .. } => StatusCode::NOT_FOUND,
-            Self::Unexpected => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (
             status_code,

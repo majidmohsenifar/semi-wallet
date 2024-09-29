@@ -9,7 +9,7 @@ pub async fn get_router(shared_state: SharedState) -> Router {
         .route("/create", post(handler::order::create_order))
         .route("/detail", get(handler::order::order_detail));
 
-    let coin_routes = Router::new().route("/", get(handler::coin::coin_list));
+    let coin_routes = Router::new().route("/", get(handler::coin::coins_list));
 
     let api_routes = Router::new()
         .nest("/orders", order_routes)
