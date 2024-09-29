@@ -1,11 +1,13 @@
 use sqlx::{Pool, Postgres};
+use tracing::error;
 
-use super::error::OrderError;
 use crate::repository::db::Repository;
 use crate::repository::models::OrderStatus;
 use crate::repository::order::CreateOrderArgs;
 use crate::service::payment::service::{CreatePaymentParams, Provider, Service as PaymentService};
 use crate::service::plan::service::Service as PlanService;
+
+use super::error::OrderError;
 
 pub struct Service {
     db: Pool<Postgres>,
@@ -16,7 +18,7 @@ pub struct Service {
 
 #[derive(serde::Deserialize)]
 pub struct CreateOrderParams {
-    pub plan_id: i64,
+    pub plan_code: String,
     pub user_id: i64,
     pub payment_provider: String,
 }
@@ -31,12 +33,12 @@ pub struct CreateOrderResult {
 
 #[derive(serde::Deserialize)]
 pub struct OrderDetailParams {
-    pub id: u32,
+    pub id: i64,
 }
 
 #[derive(Debug, serde::Serialize, Clone)]
 pub struct OrderDetailResult {
-    pub id: u32,
+    pub id: i64,
 }
 
 impl Service {
@@ -63,22 +65,31 @@ impl Service {
             return Err(OrderError::InvalidPaymentProvider);
         }
         let payment_provider = payment_provider.unwrap();
-        let plan = self.plan_service.get_plan_by_id(params.plan_id).await;
+        let plan = self.plan_service.get_plan_by_code(&params.plan_code).await;
         if let Err(e) = plan {
             match e {
                 sqlx::Error::RowNotFound => {
-                    return Err(OrderError::PlanNotFound);
+                    return Err(OrderError::PlanNotFound {
+                        code: params.plan_code,
+                    });
                 }
-                _ => return Err(OrderError::Unknown),
+                _ => {
+                    return Err(OrderError::Unexpected {
+                        message: "cannot get plan".to_string(),
+                        source: Box::new(e) as Box<dyn std::error::Error>,
+                    });
+                }
             }
         }
         let plan = plan.unwrap();
 
         let db_tx = self.db.begin().await;
         if let Err(e) = db_tx {
-            //TODO: log here later
-            println!("{e}");
-            return Err(OrderError::Unknown);
+            error!("cannot start db_tx due to err: {e}");
+            return Err(OrderError::Unexpected {
+                message: "cannot start transaction".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error>,
+            });
         }
 
         let mut db_tx = db_tx.unwrap();
@@ -89,16 +100,18 @@ impl Service {
                 &mut db_tx,
                 CreateOrderArgs {
                     user_id: params.user_id,
-                    plan_id: params.plan_id,
+                    plan_id: plan.id,
                     total: plan.price,
                     status: OrderStatus::Created,
                 },
             )
             .await;
         if let Err(e) = order {
-            //TODO: we should log here
-            println!("{e}");
-            return Err(OrderError::Unknown);
+            error!("cannot create order due to err: {e}");
+            return Err(OrderError::Unexpected {
+                message: "cannot create order".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error>,
+            });
         }
         let order = order.unwrap();
 
@@ -116,17 +129,21 @@ impl Service {
             .await;
 
         if let Err(e) = payment {
-            //TODO: we should log here
-            println!("{e}");
-            return Err(OrderError::Unknown);
+            error!("cannot create payment due to err: {e}");
+            return Err(OrderError::Unexpected {
+                message: "cannot create payment".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error>,
+            });
         }
 
         let payment = payment.unwrap();
         let tx_res = db_tx.commit().await;
         if let Err(e) = tx_res {
-            //TODO: we should log here
-            println!("{e}");
-            return Err(OrderError::Unknown);
+            error!("cannot commit db tx due to err: {e}");
+            return Err(OrderError::Unexpected {
+                message: "cannot insert to db".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error>,
+            });
         }
         Ok(CreateOrderResult {
             order_id: order.id,
@@ -140,18 +157,31 @@ impl Service {
         &self,
         params: OrderDetailParams,
     ) -> Result<OrderDetailResult, OrderError> {
-        let query_res = sqlx::query("SELECT * from orders where id = $1")
-            .fetch_one(&self.db)
-            .await;
+        let conn = self.db.acquire().await;
+        if let Err(e) = conn {
+            error!("cannot acquire db conn due to err {e}");
+            return Err(OrderError::Unexpected {
+                message: "cannot get order from db".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error>,
+            });
+        }
+        let mut conn = conn.unwrap();
+        let order = self.repo.get_order_by_id(&mut conn, params.id).await;
+        //let order = self.repo.get_order_by_id(&mut *db_tx, params.id).await;
 
-        let _order = match query_res {
-            Err(_) => {
-                //TODO: log error and check if it is not found
-                return Err(OrderError::NotFound);
-            }
-            Ok(o) => o,
-        };
-        Ok(OrderDetailResult { id: params.id })
-        //Err(OrderError::NotFound)
+        if let Err(e) = order {
+            match e {
+                sqlx::Error::RowNotFound => return Err(OrderError::NotFound { id: params.id }),
+                _ => {
+                    error!("cannot get order due to err {e}");
+                    return Err(OrderError::Unexpected {
+                        message: "cannot get order from db".to_string(),
+                        source: Box::new(e) as Box<dyn std::error::Error>,
+                    });
+                }
+            };
+        }
+        let order = order.unwrap();
+        Ok(OrderDetailResult { id: order.id })
     }
 }

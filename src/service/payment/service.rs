@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use tracing::error;
 
 use sqlx::{Pool, Postgres};
 
@@ -98,7 +99,6 @@ impl Service {
         db_tx: &mut sqlx::Transaction<'_, Postgres>,
         params: CreatePaymentParams,
     ) -> Result<CreatePaymentResult, PaymentError> {
-        //TODO: insert into db
         let payment = self
             .repo
             .create_payment(
@@ -113,29 +113,31 @@ impl Service {
             .await;
 
         if let Err(e) = payment {
-            //TODO: we should log here
-            println!("{e}");
-            return Err(PaymentError::Unknown);
+            error!("cannot create payment due to err {e}");
+            return Err(PaymentError::Unexpected);
         }
 
         let payment = payment.unwrap();
 
-        let payment_provider = self.providers.get(&params.payment_provider).unwrap();
+        let payment_handler = self.providers.get(&params.payment_provider).unwrap();
         let make_payment_params = MakePaymentParams {
             payment_id: payment.id,
             amount: params.amount,
             order_id: params.order_id,
             extra_data: HashMap::new(),
         };
-        let make_payment_result = match payment_provider {
+        let make_payment_result = match payment_handler {
             PaymentHandler::Stripe(stripe) => stripe.make_payment(make_payment_params).await,
             PaymentHandler::Bitpay(bitpay) => bitpay.make_payment(make_payment_params).await,
         };
 
         if let Err(e) = make_payment_result {
-            //TODO: we should log here and handle error better
-            println!("{:#?}", e);
-            return Err(PaymentError::Unknown);
+            //TODO: after changing the error, add error to the log
+            error!(
+                "cannot make payment using {:#?} due to err ",
+                params.payment_provider,
+            );
+            return Err(PaymentError::Unexpected);
         }
 
         let make_payment_result = make_payment_result.unwrap();
@@ -144,9 +146,8 @@ impl Service {
             .update_payment_external_id(db_tx, payment.id, make_payment_result.external_id)
             .await;
         if let Err(e) = update_payment_result {
-            //TODO: we should log here and handle error better
-            println!("{:#?}", e);
-            return Err(PaymentError::Unknown);
+            error!("cannot update the payment to set external_id due to err {e}");
+            return Err(PaymentError::Unexpected);
         }
 
         Ok(CreatePaymentResult {

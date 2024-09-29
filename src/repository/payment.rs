@@ -17,8 +17,7 @@ impl Repository {
         &self,
         conn: &mut PgConnection,
         args: CreatePaymentArgs,
-    ) -> Result<Payment, sqlx::Error>
-where {
+    ) -> Result<Payment, sqlx::Error> {
         let res = sqlx::query_as::<_, Payment>(
             "INSERT INTO payments (
             user_id,
@@ -45,8 +44,7 @@ where {
         conn: &mut PgConnection,
         payment_id: i64,
         external_id: String,
-    ) -> Result<(), sqlx::Error>
-where {
+    ) -> Result<(), sqlx::Error> {
         sqlx::query(
             "UPDATE payments
             SET external_id = $2,

@@ -30,7 +30,7 @@ impl StripeProvider {
         checkout_params.success_url = Some(""); //TODO: handle this later, must be read from config
         checkout_params.cancel_url = Some(""); //TODO: handle this later
         checkout_params.metadata = Some(HashMap::from([
-            ("payment_id".to_string(), params.payment_id.to_string()), //TODO: better to make key as consntant
+            ("payment_id".to_string(), params.payment_id.to_string()), //TODO: better to make key as constant
             ("order_id".to_string(), params.order_id.to_string()), //TODO: better to make key as constant
             ("env".to_string(), "prod".to_string()),               //TODO: handle this later
         ]));

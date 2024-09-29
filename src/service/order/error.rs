@@ -1,18 +1,16 @@
-use core::fmt;
-use std::error::Error;
+use snafu::Snafu;
 
-#[derive(Debug)]
+#[derive(Debug, Snafu)]
 pub enum OrderError {
-    NotFound,
-    Unknown,
-    PlanNotFound,
+    #[snafu(display("order with id {id} not found"))]
+    NotFound { id: i64 },
+    #[snafu(display("plan with code {code} not found"))]
+    PlanNotFound { code: String },
+    #[snafu(display("invalid payment provider"))]
     InvalidPaymentProvider,
-}
-
-impl Error for OrderError {}
-
-impl fmt::Display for OrderError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "error")
-    }
+    #[snafu(display("{message}"))]
+    Unexpected {
+        message: String,
+        source: Box<dyn std::error::Error>,
+    },
 }

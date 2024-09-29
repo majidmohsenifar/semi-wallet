@@ -1,4 +1,4 @@
--- Add migration script here
+-- Add up migration script here
 CREATE TYPE payment_status AS ENUM (
     'CREATED',  
     'IN_PROGRESS'

@@ -3,7 +3,7 @@ use std::error::Error;
 
 #[derive(Debug)]
 pub enum PaymentError {
-    Unknown,
+    Unexpected,
 }
 
 impl Error for PaymentError {}

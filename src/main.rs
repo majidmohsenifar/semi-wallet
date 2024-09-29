@@ -2,11 +2,13 @@ use std::sync::Arc;
 
 use semi_wallet::client::postgres;
 use semi_wallet::repository::db::Repository;
+use semi_wallet::service::coin::service::Service as CoinService;
 use semi_wallet::service::order::service::Service as OrderService;
 use semi_wallet::service::payment::service::Service as PaymentService;
 use semi_wallet::service::plan::service::Service as PlanService;
 use semi_wallet::{config, router, AppState};
 use tokio::sync::RwLock;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() {
@@ -19,10 +21,25 @@ async fn main() {
         &cfg.stripe.url,
         &cfg.stripe.secret,
     );
+    let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let plan_service = PlanService::new(db_pool.clone(), repo.clone());
     let order_service =
         OrderService::new(db_pool.clone(), repo.clone(), plan_service, payment_service);
-    let app_state = AppState { order_service };
+
+    //TODO: fix this config later
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                format!("{}=debug,tower_http=debug", env!("CARGO_CRATE_NAME")).into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
+    let app_state = AppState {
+        order_service,
+        coin_service,
+    };
     let shared_state = Arc::new(RwLock::new(app_state));
     let app = router::get_router(shared_state).await;
     let listener = tokio::net::TcpListener::bind(cfg.server.address)

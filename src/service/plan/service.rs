@@ -14,4 +14,7 @@ impl Service {
     pub async fn get_plan_by_id(&self, id: i64) -> Result<Plan, sqlx::Error> {
         self.repo.get_plan_by_id(&self.db, id).await
     }
+    pub async fn get_plan_by_code(&self, code: &str) -> Result<Plan, sqlx::Error> {
+        self.repo.get_plan_by_code(&self.db, code).await
+    }
 }

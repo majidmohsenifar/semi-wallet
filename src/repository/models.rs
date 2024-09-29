@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, sqlx::Type)]
 #[sqlx(type_name = "order_status", rename_all = "UPPERCASE")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum OrderStatus {
     Created,
     Completed,
@@ -11,6 +12,7 @@ pub enum OrderStatus {
 
 #[derive(Serialize, Deserialize, Debug, sqlx::Type)]
 #[sqlx(type_name = "payment_status", rename_all = "UPPERCASE")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum PaymentStatus {
     Created,
     Completed,
@@ -46,4 +48,15 @@ pub struct Payment {
     pub order_id: i64,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(sqlx::FromRow, Deserialize, Serialize)]
+pub struct Coin {
+    pub id: i64,
+    pub symbol: String,
+    pub name: String,
+    pub logo: String,
+    pub network: String,
+    pub decimals: i16,
+    pub description: String,
 }

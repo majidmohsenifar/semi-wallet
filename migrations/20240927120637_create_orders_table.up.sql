@@ -1,4 +1,4 @@
--- Add migration script here
+-- Add up migration script here
 CREATE TYPE order_status AS ENUM (
     'CREATED',  
     'COMPLETED',

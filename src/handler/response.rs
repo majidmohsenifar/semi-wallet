@@ -17,12 +17,7 @@ pub fn success<T: Serialize>(data: T, message: &str) -> (StatusCode, Json<ApiRes
     )
 }
 
-pub fn error(status_code: StatusCode, message: &str) -> (StatusCode, Json<ApiResponse<Vec<i8>>>) {
-    (
-        status_code,
-        Json(ApiResponse {
-            data: Some(Vec::new()),
-            message,
-        }),
-    )
+#[derive(Serialize)]
+pub struct ApiError<'a> {
+    pub message: &'a str,
 }

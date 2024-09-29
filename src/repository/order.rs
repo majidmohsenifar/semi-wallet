@@ -16,11 +16,8 @@ impl Repository {
     pub async fn create_order(
         &self,
         conn: &mut PgConnection,
-        //conn: A,
         args: CreateOrderArgs,
-    ) -> Result<Order, sqlx::Error>
-where {
-        //let mut conn = conn.acquire().await?;
+    ) -> Result<Order, sqlx::Error> {
         let res = sqlx::query_as::<_, Order>(
             "INSERT INTO orders (
             user_id,
@@ -39,6 +36,18 @@ where {
         .bind(args.status)
         .fetch_one(&mut *conn)
         .await?;
+        Ok(res)
+    }
+
+    pub async fn get_order_by_id(
+        &self,
+        conn: &mut PgConnection,
+        id: i64,
+    ) -> Result<Order, sqlx::Error> {
+        let res = sqlx::query_as::<_, Order>("SELECT * from orders where id = $1")
+            .bind(id)
+            .fetch_one(&mut *conn)
+            .await?;
         Ok(res)
     }
 }
