@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use semi_wallet::client::postgres;
 use semi_wallet::repository::db::Repository;
+use semi_wallet::service::auth::service::Service as AuthService;
 use semi_wallet::service::coin::service::Service as CoinService;
 use semi_wallet::service::order::service::Service as OrderService;
 use semi_wallet::service::payment::service::Service as PaymentService;
@@ -25,6 +26,7 @@ async fn main() {
     let plan_service = PlanService::new(db_pool.clone(), repo.clone());
     let order_service =
         OrderService::new(db_pool.clone(), repo.clone(), plan_service, payment_service);
+    let auth_service = AuthService::new(db_pool.clone(), repo.clone(), cfg.jwt.secret);
 
     //TODO: fix this config later
     tracing_subscriber::registry()
@@ -39,6 +41,7 @@ async fn main() {
     let app_state = AppState {
         order_service,
         coin_service,
+        auth_service,
     };
     let shared_state = Arc::new(RwLock::new(app_state));
     let app = router::get_router(shared_state).await;

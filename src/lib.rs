@@ -9,6 +9,7 @@ pub mod repository;
 pub mod router;
 pub mod service;
 
+use crate::service::auth::service::Service as AuthService;
 use crate::service::coin::service::Service as CoinService;
 use crate::service::order::service::Service as OrderService;
 use std::sync::Arc;
@@ -19,4 +20,5 @@ pub type SharedState = Arc<RwLock<AppState>>;
 pub struct AppState {
     pub order_service: OrderService,
     pub coin_service: CoinService,
+    pub auth_service: AuthService,
 }

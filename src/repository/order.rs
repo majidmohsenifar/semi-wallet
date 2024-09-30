@@ -26,7 +26,7 @@ impl Repository {
             status,
             created_at,
             updated_at
-            ) VALUS(
+            ) VALUS (
             $1, $2, $3, $4, now(), now()
             ) RETURNING *",
         )

@@ -37,7 +37,7 @@ impl StripeProvider {
         checkout_params.line_items = Some(vec![CreateCheckoutSessionLineItems {
             price_data: Some(CreateCheckoutSessionLineItemsPriceData {
                 currency: stripe::Currency::USD,
-                unit_amount: Some((params.amount * 100 as f64) as i64),
+                unit_amount: Some((params.amount * 100_f64) as i64),
                 product_data: Some(stripe::CreateCheckoutSessionLineItemsPriceDataProductData {
                     name: "semi-wallet".to_string(), //TODO: change this later, make it constant
                     ..Default::default()

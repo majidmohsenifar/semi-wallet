@@ -28,3 +28,5 @@ async-stripe = { version = "0.31", features = ["runtime-tokio-hyper"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 snafu = "0.8.5"
+bcrypt = "0.15.1"
+jsonwebtoken = "9.3.0"

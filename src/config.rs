@@ -6,6 +6,7 @@ pub struct Settings {
     pub redis: RedisConfig,
     pub server: ServerConfig,
     pub stripe: StripeConfig,
+    pub jwt: JwtConfig,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -26,6 +27,11 @@ pub struct ServerConfig {
 #[derive(serde::Deserialize, Clone, Debug)]
 pub struct StripeConfig {
     pub url: String,
+    pub secret: String,
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct JwtConfig {
     pub secret: String,
 }
 

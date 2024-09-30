@@ -60,3 +60,12 @@ pub struct Coin {
     pub decimals: i16,
     pub description: String,
 }
+
+#[derive(sqlx::FromRow, Deserialize, Serialize)]
+pub struct User {
+    pub id: i64,
+    pub email: String,
+    pub password: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
