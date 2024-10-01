@@ -20,7 +20,7 @@ name = "semi-wallet"
 [dependencies]
 axum = "0.7.5"
 tokio = { version = "1", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0.210", features = ["derive"] }
 config = "0.14.0"
 chrono = {version = "0.4.38", features = ["serde"] }
 sqlx = { version = "0.8.2", features = ["runtime-tokio-rustls", "uuid", "chrono", "any", "postgres", "migrate"] }
@@ -30,3 +30,7 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 snafu = "0.8.5"
 bcrypt = "0.15.1"
 jsonwebtoken = "9.3.0"
+url = "2.5.2"
+uuid = { version = "1.10.0", features = ["v4"] }
+reqwest = { version = "0.12.8", default-features = false, features = ["json", "rustls-tls"] }
+serde_json = "1.0.128"

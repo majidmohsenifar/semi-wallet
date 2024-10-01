@@ -14,7 +14,7 @@ pub struct Service {
 pub struct RegisterParams {
     pub email: String,
     pub password: String,
-    pub password_confirm: String,
+    pub confirm_password: String,
 }
 
 #[derive(serde::Serialize)]

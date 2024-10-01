@@ -5,8 +5,8 @@
 pub mod client;
 pub mod config;
 pub mod handler;
+pub mod http_server;
 pub mod repository;
-pub mod router;
 pub mod service;
 
 use crate::service::auth::service::Service as AuthService;

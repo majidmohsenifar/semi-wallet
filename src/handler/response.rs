@@ -21,3 +21,7 @@ pub fn success<T: Serialize>(data: T, message: &str) -> (StatusCode, Json<ApiRes
 pub struct ApiError<'a> {
     pub message: &'a str,
 }
+
+pub fn error(status_code: StatusCode, message: &str) -> (StatusCode, Json<ApiError<'_>>) {
+    (status_code, Json(ApiError { message }))
+}
