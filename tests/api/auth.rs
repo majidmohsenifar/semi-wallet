@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use semi_wallet::{
     handler::response::{ApiError, ApiResponse},
     repository::user::CreateUserArgs,
-    service::auth::{bcrypt, service::RegisterResult},
+    service::auth::{
+        bcrypt,
+        service::{LoginResult, RegisterResult},
+    },
 };
 
 use crate::helpers::spawn_app;
@@ -122,4 +125,121 @@ async fn register_successful() {
     let u = app.repo.get_user_by_email(&app.db, email).await.unwrap();
     let is_verified = bcrypt::verify_password("12345678", &u.password).unwrap();
     assert!(is_verified);
+}
+
+#[tokio::test]
+async fn login_invalid_inputs() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+        (HashMap::new(), "empty email"),
+        (
+            HashMap::from([("email", "invalid"), ("password", "12345678")]),
+            "invalid email",
+        ),
+        (
+            HashMap::from([("email", "test@test.test")]),
+            "empty password",
+        ),
+    ];
+
+    for (body, msg) in test_cases {
+        let response = client
+            .post(&format!("{}/api/v1/auth/login", app.address))
+            .json(&body)
+            .send()
+            .await
+            .expect("failed to execute request");
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "the api did not fail with 400 Bad Request when the payload has the problem {}",
+            msg
+        );
+    }
+}
+
+#[tokio::test]
+async fn login_invalid_credential_email_does_not_exist() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let email = "doesnotexist@test.test";
+    let body = HashMap::from([("email", email), ("password", "12345678")]);
+    let response = client
+        .post(&format!("{}/api/v1/auth/login", app.address))
+        .json(&body)
+        .send()
+        .await
+        .expect("failed to execute request");
+    assert_eq!(
+        401,
+        response.status().as_u16(),
+        "should get the error as unauthorized",
+    );
+}
+
+#[tokio::test]
+async fn login_invalid_credential_wrong_password() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let email = "wrongpassword@test.test";
+
+    let encrypted_password = bcrypt::encrypt_password("12345678").unwrap();
+    app.repo
+        .create_user(
+            &app.db,
+            CreateUserArgs {
+                email: email.to_string(),
+                password: encrypted_password,
+            },
+        )
+        .await
+        .unwrap();
+
+    let body = HashMap::from([("email", email), ("password", "wrong")]);
+    let response = client
+        .post(&format!("{}/api/v1/auth/login", app.address))
+        .json(&body)
+        .send()
+        .await
+        .expect("failed to execute request");
+    assert_eq!(
+        401,
+        response.status().as_u16(),
+        "should get the error as unauthorized because the password is worng",
+    );
+}
+
+#[tokio::test]
+async fn login_successful() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let email = "success@test.test";
+
+    let encrypted_password = bcrypt::encrypt_password("12345678").unwrap();
+    app.repo
+        .create_user(
+            &app.db,
+            CreateUserArgs {
+                email: email.to_string(),
+                password: encrypted_password,
+            },
+        )
+        .await
+        .unwrap();
+
+    let body = HashMap::from([("email", email), ("password", "12345678")]);
+    let response = client
+        .post(&format!("{}/api/v1/auth/login", app.address))
+        .json(&body)
+        .send()
+        .await
+        .expect("failed to execute request");
+    assert_eq!(200, response.status().as_u16());
+
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiResponse<'_, LoginResult> = serde_json::from_slice(&bytes).unwrap();
+    let d = res.data.unwrap();
+    assert_ne!(d.token, "");
+    assert_eq!(res.message, "");
 }

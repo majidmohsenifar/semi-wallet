@@ -52,10 +52,25 @@ pub async fn register(State(state): State<SharedState>, req: Request) -> impl In
     }
 }
 
-pub async fn login(
-    State(state): State<SharedState>,
-    Json(params): Json<LoginParams>,
-) -> impl IntoResponse {
+pub async fn login(State(state): State<SharedState>, req: Request) -> impl IntoResponse {
+    let body = match axum::body::to_bytes(req.into_body(), usize::MAX).await {
+        Err(_) => {
+            return response::error(StatusCode::BAD_REQUEST, "invalid request body")
+                .into_response();
+        }
+        Ok(t) => t,
+    };
+    let params: LoginParams = match serde_json::from_slice(&body) {
+        Err(e) => {
+            return response::error(StatusCode::BAD_REQUEST, &e.to_string()).into_response();
+        }
+        Ok(t) => t,
+    };
+
+    if let Err(e) = params.validate() {
+        return response::error(StatusCode::BAD_REQUEST, &e.to_string()).into_response();
+    }
+
     let state = state.read().await;
     let res = state.auth_service.login(LoginParams { ..params }).await;
 

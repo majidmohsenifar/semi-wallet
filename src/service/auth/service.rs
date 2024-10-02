@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use validator::Validate;
 
@@ -11,7 +12,7 @@ pub struct Service {
     jwt_secret: String,
 }
 
-#[derive(serde::Deserialize, Validate)]
+#[derive(Deserialize, Validate)]
 pub struct RegisterParams {
     #[validate(email)]
     pub email: String,
@@ -21,16 +22,17 @@ pub struct RegisterParams {
     pub confirm_password: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RegisterResult {}
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Validate)]
 pub struct LoginParams {
+    #[validate(email)]
     pub email: String,
     pub password: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LoginResult {
     pub token: String,
 }
