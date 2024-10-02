@@ -1,4 +1,5 @@
 use sqlx::{Pool, Postgres};
+use validator::Validate;
 
 use crate::repository::{db::Repository, user::CreateUserArgs};
 
@@ -10,14 +11,17 @@ pub struct Service {
     jwt_secret: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Validate)]
 pub struct RegisterParams {
+    #[validate(email)]
     pub email: String,
+    #[validate(length(min = 8))]
     pub password: String,
+    #[validate(length(min = 8))]
     pub confirm_password: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct RegisterResult {}
 
 #[derive(serde::Deserialize)]

@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use axum::{
     extract::{Request, State},
     http::StatusCode,
@@ -13,10 +11,11 @@ use crate::{
 };
 
 use super::response;
+use validator::Validate;
 
 pub async fn register(State(state): State<SharedState>, req: Request) -> impl IntoResponse {
     let body = match axum::body::to_bytes(req.into_body(), usize::MAX).await {
-        Err(e) => {
+        Err(_) => {
             return response::error(StatusCode::BAD_REQUEST, "invalid request body")
                 .into_response();
         }
@@ -28,6 +27,19 @@ pub async fn register(State(state): State<SharedState>, req: Request) -> impl In
         }
         Ok(t) => t,
     };
+
+    if let Err(e) = params.validate() {
+        return response::error(StatusCode::BAD_REQUEST, &e.to_string()).into_response();
+    }
+
+    if params.password != params.confirm_password {
+        return response::error(
+            StatusCode::BAD_REQUEST,
+            "confirm_password is not the same as password",
+        )
+        .into_response();
+    }
+
     let state = state.read().await;
     let res = state
         .auth_service

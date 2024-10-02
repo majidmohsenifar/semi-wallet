@@ -34,3 +34,4 @@ url = "2.5.2"
 uuid = { version = "1.10.0", features = ["v4"] }
 reqwest = { version = "0.12.8", default-features = false, features = ["json", "rustls-tls"] }
 serde_json = "1.0.128"
+validator = { version = "0.18.1", features = ["derive"]}

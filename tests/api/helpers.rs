@@ -1,4 +1,4 @@
-use semi_wallet::http_server::{self, HttpServer};
+use semi_wallet::{http_server::HttpServer, repository::db::Repository};
 use sqlx::{Connection, Executor, PgConnection, Pool, Postgres};
 use uuid::Uuid;
 
@@ -7,6 +7,7 @@ use semi_wallet::{client::postgres, config};
 pub struct TestApp {
     pub address: String,
     pub db: Pool<Postgres>,
+    pub repo: Repository,
 }
 
 pub async fn spawn_app() -> TestApp {
@@ -14,15 +15,19 @@ pub async fn spawn_app() -> TestApp {
         let mut cfg = config::get_configuration().expect("failed to get configuration");
         let db_dsn = configure_db(&cfg.db).await;
         cfg.db.dsn = db_dsn;
+        //consider the port 0, so the os will provide a free port
+        cfg.server.address = "127.0.0.1:0".to_string();
         cfg
     };
     //TODO: maybe we need tracing here too
-    //let http_server = http_server::run_server(cfg.clone());
     let http_server = HttpServer::build(cfg.clone()).await;
+    let address = format!("http://127.0.0.1:{}", http_server.port());
     tokio::spawn(http_server.run());
+    let db = postgres::new_pg_pool(&cfg.db.dsn).await;
     TestApp {
-        address: "http://".to_string() + &cfg.server.address,
-        db: postgres::new_pg_pool(&cfg.db.dsn).await,
+        address,
+        db,
+        repo: Repository::new(),
     }
 }
 
@@ -53,7 +58,7 @@ async fn configure_db(db_cfg: &config::DbConfig) -> String {
         port = db_url.port().expect("empty port"),
         db = db_name,
     );
-    let db_pool = postgres::new_pg_pool(&db_dsn_without_database).await;
+    let db_pool = postgres::new_pg_pool(&db_dsn).await;
     sqlx::migrate!("./migrations")
         .run(&db_pool)
         .await

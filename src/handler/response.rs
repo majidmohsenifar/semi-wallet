@@ -1,7 +1,7 @@
 use axum::{http::StatusCode, Json};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ApiResponse<'a, T: Serialize> {
     pub data: Option<T>,
     pub message: &'a str,
@@ -17,7 +17,7 @@ pub fn success<T: Serialize>(data: T, message: &str) -> (StatusCode, Json<ApiRes
     )
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ApiError<'a> {
     pub message: &'a str,
 }

@@ -18,6 +18,7 @@ use crate::service::plan::service::Service as PlanService;
 pub struct HttpServer {
     router: Router,
     listener: TcpListener,
+    port: u16,
 }
 
 impl HttpServer {
@@ -48,9 +49,18 @@ impl HttpServer {
         let listener = tokio::net::TcpListener::bind(cfg.server.address)
             .await
             .unwrap();
+        let port = listener.local_addr().unwrap().port();
         //axum::serve(listener, router).await.unwrap();
-        HttpServer { router, listener }
+        HttpServer {
+            router,
+            listener,
+            port,
+        }
     }
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
     pub async fn run(self) -> Result<(), io::Error> {
         axum::serve(self.listener, self.router).await
     }
