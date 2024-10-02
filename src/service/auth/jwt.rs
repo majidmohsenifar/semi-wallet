@@ -1,9 +1,10 @@
 use chrono::{Duration, Utc};
-use jsonwebtoken::{encode, EncodingKey, Header};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use serde::{Deserialize, Serialize};
 
 const JWT_EXPIRATION_DURATION_IN_HOURS: i64 = 12;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Claims {
     aud: String,
     sub: String,
@@ -23,4 +24,17 @@ pub fn create_jwt(secret: &[u8], email: String) -> Result<String, jsonwebtoken::
         &EncodingKey::from_secret(secret),
     )?;
     Ok(token)
+}
+
+pub fn get_email_from_token(
+    secret: &[u8],
+    token: &str,
+) -> Result<String, jsonwebtoken::errors::Error> {
+    //todo!("impl");
+    let token_data = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(secret),
+        &Validation::default(),
+    )?;
+    Ok(token_data.claims.aud)
 }

@@ -43,6 +43,7 @@ impl IntoResponse for AuthError {
         let status_code = match self {
             Self::EmailAlreadyTaken => StatusCode::UNPROCESSABLE_ENTITY,
             Self::InvalidCredentials => StatusCode::UNAUTHORIZED,
+            Self::InvalidToken => StatusCode::UNAUTHORIZED,
             Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (

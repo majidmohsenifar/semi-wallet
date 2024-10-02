@@ -1,8 +1,9 @@
 use sqlx::{Pool, Postgres};
 use tracing::error;
+use validator::Validate;
 
 use crate::repository::db::Repository;
-use crate::repository::models::OrderStatus;
+use crate::repository::models::{OrderStatus, User};
 use crate::repository::order::CreateOrderArgs;
 use crate::service::payment::service::{CreatePaymentParams, Provider, Service as PaymentService};
 use crate::service::plan::service::Service as PlanService;
@@ -16,10 +17,9 @@ pub struct Service {
     payment_service: PaymentService,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Validate)]
 pub struct CreateOrderParams {
     pub plan_code: String,
-    pub user_id: i64,
     pub payment_provider: String,
 }
 
@@ -58,6 +58,7 @@ impl Service {
 
     pub async fn create_order(
         &self,
+        user: User,
         params: CreateOrderParams,
     ) -> Result<CreateOrderResult, OrderError> {
         let payment_provider = Provider::from(&params.payment_provider);
@@ -76,7 +77,7 @@ impl Service {
                 _ => {
                     return Err(OrderError::Unexpected {
                         message: "cannot get plan".to_string(),
-                        source: Box::new(e) as Box<dyn std::error::Error>,
+                        source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                     });
                 }
             }
@@ -88,7 +89,7 @@ impl Service {
             error!("cannot start db_tx due to err: {e}");
             return Err(OrderError::Unexpected {
                 message: "cannot start transaction".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error>,
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
 
@@ -99,7 +100,7 @@ impl Service {
             .create_order(
                 &mut db_tx,
                 CreateOrderArgs {
-                    user_id: params.user_id,
+                    user_id: user.id,
                     plan_id: plan.id,
                     total: plan.price,
                     status: OrderStatus::Created,
@@ -110,7 +111,7 @@ impl Service {
             error!("cannot create order due to err: {e}");
             return Err(OrderError::Unexpected {
                 message: "cannot create order".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error>,
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
         let order = order.unwrap();
@@ -132,7 +133,7 @@ impl Service {
             error!("cannot create payment due to err: {e}");
             return Err(OrderError::Unexpected {
                 message: "cannot create payment".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error>,
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
 
@@ -142,7 +143,7 @@ impl Service {
             error!("cannot commit db tx due to err: {e}");
             return Err(OrderError::Unexpected {
                 message: "cannot insert to db".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error>,
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
         Ok(CreateOrderResult {
@@ -162,7 +163,7 @@ impl Service {
             error!("cannot acquire db conn due to err {e}");
             return Err(OrderError::Unexpected {
                 message: "cannot get order from db".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error>,
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
         let mut conn = conn.unwrap();
@@ -176,7 +177,7 @@ impl Service {
                     error!("cannot get order due to err {e}");
                     return Err(OrderError::Unexpected {
                         message: "cannot get order from db".to_string(),
-                        source: Box::new(e) as Box<dyn std::error::Error>,
+                        source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                     });
                 }
             };

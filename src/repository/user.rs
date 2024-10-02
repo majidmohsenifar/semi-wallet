@@ -1,4 +1,4 @@
-use sqlx::{Pool, Postgres};
+use sqlx::{PgConnection, Pool, Postgres};
 
 use super::{db::Repository, models::User};
 
@@ -22,7 +22,7 @@ impl Repository {
 
     pub async fn create_user(
         &self,
-        db: &Pool<Postgres>,
+        conn: &mut PgConnection,
         args: CreateUserArgs,
     ) -> Result<User, sqlx::Error> {
         let res = sqlx::query_as::<_, User>(
@@ -37,7 +37,7 @@ impl Repository {
         )
         .bind(args.email)
         .bind(args.password)
-        .fetch_one(db)
+        .fetch_one(&mut *conn)
         .await?;
         Ok(res)
     }

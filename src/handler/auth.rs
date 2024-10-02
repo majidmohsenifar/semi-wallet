@@ -2,7 +2,6 @@ use axum::{
     extract::{Request, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 
 use crate::{

@@ -2,13 +2,15 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use validator::Validate;
 
-use crate::repository::{db::Repository, user::CreateUserArgs};
+use crate::repository::models::User;
+use crate::service::user::service::{CreateUserParams, Service as UserService};
 
 use super::{bcrypt, error::AuthError, jwt};
 
+#[derive(Clone)]
 pub struct Service {
     db: Pool<Postgres>,
-    repo: Repository,
+    user_service: UserService,
     jwt_secret: String,
 }
 
@@ -38,22 +40,22 @@ pub struct LoginResult {
 }
 
 impl Service {
-    pub fn new(db: Pool<Postgres>, repo: Repository, jwt_secret: String) -> Self {
+    pub fn new(db: Pool<Postgres>, user_service: UserService, jwt_secret: String) -> Self {
         Service {
             db,
-            repo,
+            user_service,
             jwt_secret,
         }
     }
 
     pub async fn register(&self, params: RegisterParams) -> Result<RegisterResult, AuthError> {
-        let existing_user = self.repo.get_user_by_email(&self.db, &params.email).await;
+        let existing_user = self.user_service.get_user_by_email(&params.email).await;
         match existing_user {
             Err(sqlx::Error::RowNotFound) => {}
             Err(e) => {
                 return Err(AuthError::Unexpected {
                     message: "cannot check if email already exist".to_string(),
-                    source: Box::new(e) as Box<dyn std::error::Error>,
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                 });
             }
             Ok(_) => {
@@ -64,39 +66,47 @@ impl Service {
             Err(e) => {
                 return Err(AuthError::Unexpected {
                     message: "cannot encrypt password".to_string(),
-                    source: Box::new(e) as Box<dyn std::error::Error>,
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                 });
             }
             Ok(hashed) => hashed,
         };
 
+        let conn = self.db.acquire().await;
+        if let Err(e) = conn {
+            return Err(AuthError::Unexpected {
+                message: "cannot acquire db conn ".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
+        }
+        let mut conn = conn.unwrap();
         let u = self
-            .repo
+            .user_service
             .create_user(
-                &self.db,
-                CreateUserArgs {
+                &mut conn,
+                CreateUserParams {
                     email: params.email,
-                    password: encrypted_password,
+                    encrypted_password,
                 },
             )
             .await;
         if let Err(e) = u {
             return Err(AuthError::Unexpected {
                 message: "cannot insert to db".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error>,
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
         Ok(RegisterResult {})
     }
 
     pub async fn login(&self, params: LoginParams) -> Result<LoginResult, AuthError> {
-        let user = self.repo.get_user_by_email(&self.db, &params.email).await;
+        let user = self.user_service.get_user_by_email(&params.email).await;
         let user = match user {
             Err(sqlx::Error::RowNotFound) => return Err(AuthError::InvalidCredentials),
             Err(e) => {
                 return Err(AuthError::Unexpected {
                     message: "something went wrong".to_string(),
-                    source: Box::new(e) as Box<dyn std::error::Error>,
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                 });
             }
             Ok(u) => u,
@@ -107,7 +117,7 @@ impl Service {
             Err(e) => {
                 return Err(AuthError::Unexpected {
                     message: "cannot verify the password".to_string(),
-                    source: Box::new(e) as Box<dyn std::error::Error>,
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                 });
             }
             Ok(verified) => verified,
@@ -121,12 +131,35 @@ impl Service {
             Err(e) => {
                 return Err(AuthError::Unexpected {
                     message: "cannot generate token".to_string(),
-                    source: Box::new(e) as Box<dyn std::error::Error>,
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                 });
             }
             Ok(t) => t,
         };
 
         Ok(LoginResult { token })
+    }
+
+    pub async fn get_user_from_token(&self, token: &str) -> Result<User, AuthError> {
+        let email = jwt::get_email_from_token(self.jwt_secret.as_bytes(), token);
+        let email = match email {
+            Err(_e) => {
+                return Err(AuthError::InvalidToken);
+            }
+            Ok(t) => t,
+        };
+
+        let user = self.user_service.get_user_by_email(&email).await;
+        let user = match user {
+            Err(sqlx::Error::RowNotFound) => return Err(AuthError::InvalidToken),
+            Err(e) => {
+                return Err(AuthError::Unexpected {
+                    message: "something went wrong".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                });
+            }
+            Ok(u) => u,
+        };
+        Ok(user)
     }
 }

@@ -11,6 +11,6 @@ pub enum OrderError {
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,
-        source: Box<dyn std::error::Error>,
+        source: Box<dyn std::error::Error + Send + Sync>,
     },
 }

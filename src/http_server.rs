@@ -1,6 +1,7 @@
-use crate::{config::Settings, handler, AppState, SharedState};
+use crate::{config::Settings, handler, middleware, AppState, SharedState};
 
 use axum::{
+    middleware as axum_middleware,
     routing::{get, post},
     Router,
 };
@@ -14,6 +15,7 @@ use crate::service::coin::service::Service as CoinService;
 use crate::service::order::service::Service as OrderService;
 use crate::service::payment::service::Service as PaymentService;
 use crate::service::plan::service::Service as PlanService;
+use crate::service::user::service::Service as UserService;
 
 pub struct HttpServer {
     router: Router,
@@ -32,11 +34,12 @@ impl HttpServer {
             &cfg.stripe.url,
             &cfg.stripe.secret,
         );
+        let user_service = UserService::new(db_pool.clone(), repo.clone());
         let coin_service = CoinService::new(db_pool.clone(), repo.clone());
         let plan_service = PlanService::new(db_pool.clone(), repo.clone());
         let order_service =
             OrderService::new(db_pool.clone(), repo.clone(), plan_service, payment_service);
-        let auth_service = AuthService::new(db_pool.clone(), repo.clone(), cfg.jwt.secret);
+        let auth_service = AuthService::new(db_pool.clone(), user_service, cfg.jwt.secret);
 
         let app_state = AppState {
             order_service,
@@ -69,7 +72,11 @@ impl HttpServer {
 pub async fn get_router(shared_state: SharedState) -> Router {
     let order_routes = Router::new()
         .route("/create", post(handler::order::create_order))
-        .route("/detail", get(handler::order::order_detail));
+        .route("/detail", get(handler::order::order_detail))
+        .layer(axum_middleware::from_fn_with_state(
+            shared_state.clone(),
+            middleware::jwt_auth::auth_middleware,
+        ));
 
     let coin_routes = Router::new().route("/", get(handler::coin::coins_list));
     let auth_routes = Router::new()

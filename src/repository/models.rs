@@ -61,7 +61,7 @@ pub struct Coin {
     pub description: String,
 }
 
-#[derive(sqlx::FromRow, Deserialize, Serialize)]
+#[derive(sqlx::FromRow, Deserialize, Serialize, Clone, Default)]
 pub struct User {
     pub id: i64,
     pub email: String,

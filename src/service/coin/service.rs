@@ -33,7 +33,7 @@ impl Service {
             error!("cannot acquire db conn due to err {e}");
             return Err(CoinError::Unexpected {
                 message: "cannot get coins from db".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error>,
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
         let res = res.unwrap();
