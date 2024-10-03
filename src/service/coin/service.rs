@@ -5,13 +5,14 @@ use tracing::error;
 use crate::repository::db::Repository;
 
 use super::error::CoinError;
+use serde::{Deserialize, Serialize};
 
 pub struct Service {
     db: Pool<Postgres>,
     repo: Repository,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Coin {
     pub id: i64,
     pub symbol: String,
@@ -46,7 +47,7 @@ impl Service {
                 logo: r.logo,
                 network: r.network,
                 decimals: r.decimals,
-                description: r.description,
+                description: r.description.unwrap_or("".to_string()),
             });
         }
         Ok(coins)

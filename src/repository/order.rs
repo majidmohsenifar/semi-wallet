@@ -27,7 +27,7 @@ impl Repository {
             created_at,
             updated_at
             ) VALUS (
-            $1, $2, $3, $4, now(), now()
+            $1, $2, $3, $4, NOW(), NOW()
             ) RETURNING *",
         )
         .bind(args.user_id)

@@ -50,7 +50,7 @@ pub struct Payment {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(sqlx::FromRow, Deserialize, Serialize)]
+#[derive(sqlx::FromRow, Deserialize, Serialize, Debug)]
 pub struct Coin {
     pub id: i64,
     pub symbol: String,
@@ -58,10 +58,10 @@ pub struct Coin {
     pub logo: String,
     pub network: String,
     pub decimals: i16,
-    pub description: String,
+    pub description: Option<String>,
 }
 
-#[derive(sqlx::FromRow, Deserialize, Serialize, Clone, Default)]
+#[derive(sqlx::FromRow, Deserialize, Serialize, Debug, Clone, Default)]
 pub struct User {
     pub id: i64,
     pub email: String,

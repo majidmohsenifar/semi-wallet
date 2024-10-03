@@ -243,7 +243,7 @@ async fn login_successful() {
 
     let bytes = response.bytes().await.unwrap();
     let res: ApiResponse<'_, LoginResult> = serde_json::from_slice(&bytes).unwrap();
-    let d = res.data.unwrap();
-    assert_ne!(d.token, "");
+    let data = res.data.unwrap();
+    assert_ne!(data.token, "");
     assert_eq!(res.message, "");
 }
