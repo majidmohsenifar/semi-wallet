@@ -39,15 +39,15 @@ impl Service {
         }
         let res = res.unwrap();
         let mut coins = Vec::with_capacity(res.len());
-        for r in res {
+        for c in res {
             coins.push(Coin {
-                id: r.id,
-                symbol: r.symbol,
-                name: r.name,
-                logo: r.logo,
-                network: r.network,
-                decimals: r.decimals,
-                description: r.description.unwrap_or("".to_string()),
+                id: c.id,
+                symbol: c.symbol,
+                name: c.name,
+                logo: c.logo,
+                network: c.network,
+                decimals: c.decimals,
+                description: c.description.unwrap_or("".to_string()),
             });
         }
         Ok(coins)

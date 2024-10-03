@@ -6,7 +6,10 @@ use crate::repository::db::Repository;
 use crate::repository::models::{OrderStatus, User};
 use crate::repository::order::CreateOrderArgs;
 use crate::service::payment::service::{CreatePaymentParams, Provider, Service as PaymentService};
+use crate::service::plan::error::PlanError;
 use crate::service::plan::service::Service as PlanService;
+
+use bigdecimal::ToPrimitive;
 
 use super::error::OrderError;
 
@@ -95,6 +98,16 @@ impl Service {
 
         let mut db_tx = db_tx.unwrap();
 
+        let plan_price = match plan.price.to_f64() {
+            Some(float) => float,
+            None => {
+                return Err(OrderError::Unexpected {
+                    message: "cannot convert plan price".to_string(),
+                    source: Box::new(PlanError::InvalidPrice)
+                        as Box<dyn std::error::Error + Send + Sync>,
+                });
+            }
+        };
         let order = self
             .repo
             .create_order(
@@ -102,7 +115,7 @@ impl Service {
                 CreateOrderArgs {
                     user_id: user.id,
                     plan_id: plan.id,
-                    total: plan.price,
+                    total: plan_price,
                     status: OrderStatus::Created,
                 },
             )

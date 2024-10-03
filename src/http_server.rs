@@ -37,13 +37,18 @@ impl HttpServer {
         let user_service = UserService::new(db_pool.clone(), repo.clone());
         let coin_service = CoinService::new(db_pool.clone(), repo.clone());
         let plan_service = PlanService::new(db_pool.clone(), repo.clone());
-        let order_service =
-            OrderService::new(db_pool.clone(), repo.clone(), plan_service, payment_service);
+        let order_service = OrderService::new(
+            db_pool.clone(),
+            repo.clone(),
+            plan_service.clone(),
+            payment_service,
+        );
         let auth_service = AuthService::new(db_pool.clone(), user_service, cfg.jwt.secret);
 
         let app_state = AppState {
             order_service,
             coin_service,
+            plan_service,
             auth_service,
         };
         let shared_state = Arc::new(RwLock::new(app_state));
@@ -70,6 +75,10 @@ impl HttpServer {
 }
 
 pub async fn get_router(shared_state: SharedState) -> Router {
+    let auth_routes = Router::new()
+        .route("/register", post(handler::auth::register))
+        .route("/login", post(handler::auth::login));
+
     let order_routes = Router::new()
         .route("/create", post(handler::order::create_order))
         .route("/detail", get(handler::order::order_detail))
@@ -79,14 +88,14 @@ pub async fn get_router(shared_state: SharedState) -> Router {
         ));
 
     let coin_routes = Router::new().route("/", get(handler::coin::coins_list));
-    let auth_routes = Router::new()
-        .route("/register", post(handler::auth::register))
-        .route("/login", post(handler::auth::login));
+
+    let plan_routes = Router::new().route("/", get(handler::plan::plans_list));
 
     let api_routes = Router::new()
+        .nest("/auth", auth_routes)
         .nest("/orders", order_routes)
         .nest("/coins", coin_routes)
-        .nest("/auth", auth_routes);
+        .nest("/plans", plan_routes);
 
     Router::new()
         .nest("/api/v1", api_routes)

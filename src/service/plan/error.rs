@@ -1,16 +1,14 @@
-use core::fmt;
-use std::error::Error;
+use snafu::Snafu;
 
-#[derive(Debug)]
+#[derive(Debug, Snafu)]
 pub enum PlanError {
-    NotFound,
-    Unknown,
-}
-
-impl Error for PlanError {}
-
-impl fmt::Display for PlanError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "error")
-    }
+    #[snafu(display("plan with code {code} not found"))]
+    NotFound { code: String },
+    #[snafu(display("something went wrong with price conversion"))]
+    InvalidPrice,
+    #[snafu(display("{message}"))]
+    Unexpected {
+        message: String,
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
 }

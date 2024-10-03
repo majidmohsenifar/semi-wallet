@@ -5,7 +5,7 @@ use semi_wallet::service::coin::service::Coin;
 use crate::helpers::spawn_app;
 
 #[tokio::test]
-async fn get_coin_lists_successful() {
+async fn get_coins_list_successful() {
     let app = spawn_app().await;
 
     let btc_coin = app

@@ -13,7 +13,7 @@ pub struct CreateCoinArgs {
 
 impl Repository {
     pub async fn get_all_coins(&self, db: &Pool<Postgres>) -> Result<Vec<Coin>, sqlx::Error> {
-        let coins = sqlx::query_as::<_, Coin>("SELECT * FROM coins")
+        let coins = sqlx::query_as::<_, Coin>("SELECT * FROM coins ORDER BY id ASC")
             .fetch_all(db)
             .await?;
         Ok(coins)

@@ -22,4 +22,11 @@ impl Repository {
             .await?;
         Ok(res)
     }
+
+    pub async fn get_all_plans(&self, db: &Pool<Postgres>) -> Result<Vec<Plan>, sqlx::Error> {
+        let plans = sqlx::query_as::<_, Plan>("SELECT * FROM plans ORDER BY id ASC")
+            .fetch_all(db)
+            .await?;
+        Ok(plans)
+    }
 }

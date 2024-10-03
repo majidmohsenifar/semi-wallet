@@ -34,7 +34,8 @@ pub struct Order {
 pub struct Plan {
     pub id: i64,
     pub code: String,
-    pub price: f64,
+    pub name: String,
+    pub price: sqlx::types::BigDecimal,
     pub duration: i16,
     pub save_percentage: i16,
 }

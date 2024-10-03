@@ -23,7 +23,7 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0.210", features = ["derive"] }
 config = "0.14.0"
 chrono = {version = "0.4.38", features = ["serde"] }
-sqlx = { version = "0.8.2", features = ["runtime-tokio-rustls", "uuid", "chrono", "any", "postgres", "migrate"] }
+sqlx = { version = "0.8.2", features = ["runtime-tokio-rustls", "uuid", "chrono", "any", "postgres", "migrate", "bigdecimal"] }
 async-stripe = { version = "0.31", features = ["runtime-tokio-hyper"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
@@ -36,6 +36,7 @@ reqwest = { version = "0.12.8", default-features = false, features = ["json", "r
 serde_json = "1.0.128"
 validator = { version = "0.18.1", features = ["derive"]}
 axum-macros = "0.4.2"
+bigdecimal = { version = "0.4.5", features = ["serde"] }
 
 
 [dev-dependencies]

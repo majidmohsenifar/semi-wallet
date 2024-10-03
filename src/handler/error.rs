@@ -1,6 +1,9 @@
 use axum::{http::StatusCode, response::IntoResponse, Json};
 
-use crate::service::{auth::error::AuthError, coin::error::CoinError, order::error::OrderError};
+use crate::service::{
+    auth::error::AuthError, coin::error::CoinError, order::error::OrderError,
+    plan::error::PlanError,
+};
 
 use super::response::ApiError;
 
@@ -44,6 +47,23 @@ impl IntoResponse for AuthError {
             Self::EmailAlreadyTaken => StatusCode::UNPROCESSABLE_ENTITY,
             Self::InvalidCredentials => StatusCode::UNAUTHORIZED,
             Self::InvalidToken => StatusCode::UNAUTHORIZED,
+            Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        (
+            status_code,
+            Json(ApiError {
+                message: &self.to_string(),
+            }),
+        )
+            .into_response()
+    }
+}
+
+impl IntoResponse for PlanError {
+    fn into_response(self) -> axum::response::Response {
+        let status_code = match self {
+            Self::NotFound { .. } => StatusCode::NOT_FOUND,
+            Self::InvalidPrice { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (
