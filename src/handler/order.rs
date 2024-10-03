@@ -53,12 +53,13 @@ pub async fn create_order(
 
 pub async fn order_detail(
     State(state): State<SharedState>,
+    Extension(user): Extension<User>,
     Query(params): Query<OrderDetailParams>,
 ) -> impl IntoResponse {
     let state = state.read().await;
     let res = state
         .order_service
-        .order_detail(OrderDetailParams { id: params.id })
+        .order_detail(user, OrderDetailParams { id: params.id })
         .await;
 
     match res {

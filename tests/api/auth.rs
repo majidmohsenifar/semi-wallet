@@ -67,9 +67,11 @@ async fn register_invalid_inputs() {
 async fn register_email_already_taken() {
     let app = spawn_app().await;
     let email = "alreadyexist@test.test";
+
+    let mut conn = app.db.acquire().await.unwrap();
     app.repo
         .create_user(
-            &app.db,
+            &mut conn,
             CreateUserArgs {
                 email: email.to_string(),
                 password: "123456789".to_string(),
@@ -185,9 +187,10 @@ async fn login_invalid_credential_wrong_password() {
     let email = "wrongpassword@test.test";
 
     let encrypted_password = bcrypt::encrypt_password("12345678").unwrap();
+    let mut conn = app.db.acquire().await.unwrap();
     app.repo
         .create_user(
-            &app.db,
+            &mut conn,
             CreateUserArgs {
                 email: email.to_string(),
                 password: encrypted_password,
@@ -217,9 +220,10 @@ async fn login_successful() {
     let email = "success@test.test";
 
     let encrypted_password = bcrypt::encrypt_password("12345678").unwrap();
+    let mut conn = app.db.acquire().await.unwrap();
     app.repo
         .create_user(
-            &app.db,
+            &mut conn,
             CreateUserArgs {
                 email: email.to_string(),
                 password: encrypted_password,

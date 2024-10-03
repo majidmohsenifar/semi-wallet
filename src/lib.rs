@@ -9,6 +9,7 @@ pub mod http_server;
 pub mod middleware;
 pub mod repository;
 pub mod service;
+pub mod telemetry;
 
 use crate::service::auth::service::Service as AuthService;
 use crate::service::coin::service::Service as CoinService;

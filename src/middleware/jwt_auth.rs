@@ -2,7 +2,7 @@ use axum::{
     extract::{Request, State},
     http::{self, StatusCode},
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::IntoResponse,
 };
 
 use crate::{handler::response, SharedState};
@@ -11,8 +11,7 @@ pub async fn auth_middleware(
     State(state): State<SharedState>,
     mut req: Request,
     next: Next,
-) -> Result<Response, StatusCode> {
-    //) -> impl IntoResponse {
+) -> impl IntoResponse {
     let auth_header = req
         .headers()
         .get(http::header::AUTHORIZATION)
@@ -21,7 +20,7 @@ pub async fn auth_middleware(
     let auth_header = if let Some(bearer_token) = auth_header {
         bearer_token
     } else {
-        return Ok(response::error(StatusCode::UNAUTHORIZED, "invalid token").into_response());
+        return response::error(StatusCode::UNAUTHORIZED, "invalid token").into_response();
     };
 
     let mut parts = auth_header.split(' ');
@@ -29,7 +28,7 @@ pub async fn auth_middleware(
     let token = if let Some(token) = parts.nth(1) {
         token
     } else {
-        return Ok(response::error(StatusCode::UNAUTHORIZED, "invalid token").into_response());
+        return response::error(StatusCode::UNAUTHORIZED, "invalid token").into_response();
     };
 
     let state = state.read().await;
@@ -37,14 +36,12 @@ pub async fn auth_middleware(
     let user = state.auth_service.get_user_from_token(token).await;
 
     let user = match user {
-        Err(_e) => {
-            return Ok(response::error(StatusCode::UNAUTHORIZED, "invalid token").into_response());
+        Err(e) => {
+            return response::error(StatusCode::UNAUTHORIZED, "invalid token").into_response();
         }
         Ok(u) => u,
     };
 
     req.extensions_mut().insert(user);
-
-    Ok(next.run(req).await)
-    //Ok(next.run(req).await)
+    next.run(req).await
 }

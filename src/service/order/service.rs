@@ -156,6 +156,7 @@ impl Service {
 
     pub async fn order_detail(
         &self,
+        user: User,
         params: OrderDetailParams,
     ) -> Result<OrderDetailResult, OrderError> {
         let conn = self.db.acquire().await;
@@ -168,8 +169,6 @@ impl Service {
         }
         let mut conn = conn.unwrap();
         let order = self.repo.get_order_by_id(&mut conn, params.id).await;
-        //let order = self.repo.get_order_by_id(&mut *db_tx, params.id).await;
-
         if let Err(e) = order {
             match e {
                 sqlx::Error::RowNotFound => return Err(OrderError::NotFound { id: params.id }),
@@ -183,6 +182,9 @@ impl Service {
             };
         }
         let order = order.unwrap();
+        if order.user_id != user.id {
+            return Err(OrderError::NotFound { id: params.id });
+        }
         Ok(OrderDetailResult { id: order.id })
     }
 }

@@ -143,12 +143,11 @@ impl Service {
     pub async fn get_user_from_token(&self, token: &str) -> Result<User, AuthError> {
         let email = jwt::get_email_from_token(self.jwt_secret.as_bytes(), token);
         let email = match email {
-            Err(_e) => {
+            Err(e) => {
                 return Err(AuthError::InvalidToken);
             }
             Ok(t) => t,
         };
-
         let user = self.user_service.get_user_by_email(&email).await;
         let user = match user {
             Err(sqlx::Error::RowNotFound) => return Err(AuthError::InvalidToken),

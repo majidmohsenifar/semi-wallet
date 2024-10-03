@@ -4,6 +4,23 @@ use uuid::Uuid;
 
 use semi_wallet::{client::postgres, config};
 
+use once_cell::sync::Lazy;
+
+static TRACING: Lazy<()> = Lazy::new(|| {
+    //let default_filter_level = "info".to_string();
+    //let subscriber_name = "test".to_string();
+    //// We cannot assign the output of `get_subscriber` to a variable based on the value of `TEST_LOG`
+    //// because the sink is part of the type returned by `get_subscriber`, therefore they are not the
+    //// same type. We could work around it, but this is the most straight-forward way of moving forward.
+    //if std::env::var("TEST_LOG").is_ok() {
+    //let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::stdout);
+    //init_subscriber(subscriber);
+    //} else {
+    //let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::sink);
+    //init_subscriber(subscriber);
+    //};
+});
+
 pub struct TestApp {
     pub address: String,
     pub db: Pool<Postgres>,
@@ -11,6 +28,7 @@ pub struct TestApp {
 }
 
 pub async fn spawn_app() -> TestApp {
+    Lazy::force(&TRACING);
     let cfg = {
         let mut cfg = config::get_configuration().expect("failed to get configuration");
         let db_dsn = configure_db(&cfg.db).await;
@@ -19,7 +37,6 @@ pub async fn spawn_app() -> TestApp {
         cfg.server.address = "127.0.0.1:0".to_string();
         cfg
     };
-    //TODO: maybe we need tracing here too
     let http_server = HttpServer::build(cfg.clone()).await;
     let address = format!("http://127.0.0.1:{}", http_server.port());
     tokio::spawn(http_server.run());
