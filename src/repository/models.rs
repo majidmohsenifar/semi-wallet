@@ -70,3 +70,10 @@ pub struct User {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
+
+#[derive(sqlx::FromRow, Deserialize, Serialize)]
+pub struct UserPlan {
+    pub user_id: i64,
+    pub plan_id: i64,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+}
