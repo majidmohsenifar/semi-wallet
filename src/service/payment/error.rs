@@ -1,15 +1,14 @@
-use core::fmt;
-use std::error::Error;
+use snafu::Snafu;
 
-#[derive(Debug)]
+#[derive(Debug, Snafu)]
 pub enum PaymentError {
-    Unexpected,
-}
-
-impl Error for PaymentError {}
-
-impl fmt::Display for PaymentError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "error")
-    }
+    #[snafu(display("something went wrong with amount calculation"))]
+    InvalidAmount,
+    #[snafu(display("payment url is empty"))]
+    EmptyUrl,
+    #[snafu(display("{message}"))]
+    Unexpected {
+        message: String,
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
 }

@@ -1,3 +1,4 @@
+use sqlx::types::BigDecimal;
 use sqlx::PgConnection;
 
 use super::{
@@ -8,7 +9,7 @@ use super::{
 pub struct CreateOrderArgs {
     pub user_id: i64,
     pub plan_id: i64,
-    pub total: f64,
+    pub total: BigDecimal,
     pub status: OrderStatus,
 }
 
@@ -26,7 +27,7 @@ impl Repository {
             status,
             created_at,
             updated_at
-            ) VALUS (
+            ) VALUES (
             $1, $2, $3, $4, NOW(), NOW()
             ) RETURNING *",
         )

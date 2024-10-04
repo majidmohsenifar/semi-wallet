@@ -1,12 +1,14 @@
-use std::collections::HashMap;
-use tracing::error;
+//use bigdecimal::FromPrimitive;
+use bigdecimal::ToPrimitive;
+use sqlx::types::BigDecimal;
+use std::{collections::HashMap, fmt::Display};
 
 use sqlx::{Pool, Postgres};
 
-use crate::repository::{db::Repository, models::Payment};
+use crate::repository::{db::Repository, models::Payment, payment::CreatePaymentArgs};
 
-const PAYMENT_PROVIDER_STRIPE: &str = "STRIPE";
-const PAYMENT_PROVIDER_BITPAY: &str = "BITPAY";
+pub const PAYMENT_PROVIDER_STRIPE: &str = "STRIPE";
+pub const PAYMENT_PROVIDER_BITPAY: &str = "BITPAY";
 pub const EXPIRE_DURATION: i64 = 30; //30 min
 
 use super::{
@@ -36,7 +38,7 @@ pub struct MakePaymentResult {
 pub struct CreatePaymentParams {
     pub order_id: i64,
     pub user_id: i64,
-    pub amount: f64,
+    pub amount: BigDecimal,
     pub payment_provider: Provider,
 }
 
@@ -50,6 +52,19 @@ pub struct CheckPaymentResult {}
 pub enum Provider {
     Stripe,
     Bitpay,
+}
+
+impl Display for Provider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Provider::Stripe => {
+                write!(f, "{}", PAYMENT_PROVIDER_STRIPE)
+            }
+            Provider::Bitpay => {
+                write!(f, "{}", PAYMENT_PROVIDER_BITPAY)
+            }
+        }
+    }
 }
 
 impl Provider {
@@ -103,26 +118,32 @@ impl Service {
             .repo
             .create_payment(
                 db_tx,
-                crate::repository::payment::CreatePaymentArgs {
+                CreatePaymentArgs {
                     user_id: params.user_id,
                     order_id: params.order_id,
                     amount: params.amount,
+                    payment_provider_code: params.payment_provider.to_string(),
                     status: crate::repository::models::PaymentStatus::Created,
                 },
             )
             .await;
 
         if let Err(e) = payment {
-            error!("cannot create payment due to err {e}");
-            return Err(PaymentError::Unexpected);
+            return Err(PaymentError::Unexpected {
+                message: "cannot create payment".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
         }
-
         let payment = payment.unwrap();
+        let amount = match payment.amount.to_f64() {
+            Some(float) => float,
+            None => return Err(PaymentError::InvalidAmount),
+        };
 
         let payment_handler = self.providers.get(&params.payment_provider).unwrap();
         let make_payment_params = MakePaymentParams {
             payment_id: payment.id,
-            amount: params.amount,
+            amount,
             order_id: params.order_id,
             extra_data: HashMap::new(),
         };
@@ -132,12 +153,10 @@ impl Service {
         };
 
         if let Err(e) = make_payment_result {
-            //TODO: after changing the error, add error to the log
-            error!(
-                "cannot make payment using {:#?} due to err ",
-                params.payment_provider,
-            );
-            return Err(PaymentError::Unexpected);
+            return Err(PaymentError::Unexpected {
+                message: "cannot make payment".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
         }
 
         let make_payment_result = make_payment_result.unwrap();
@@ -146,8 +165,10 @@ impl Service {
             .update_payment_external_id(db_tx, payment.id, make_payment_result.external_id)
             .await;
         if let Err(e) = update_payment_result {
-            error!("cannot update the payment to set external_id due to err {e}");
-            return Err(PaymentError::Unexpected);
+            return Err(PaymentError::Unexpected {
+                message: "cannot make payment".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
         }
 
         Ok(CreatePaymentResult {

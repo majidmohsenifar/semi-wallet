@@ -6,9 +6,9 @@ CREATE TYPE order_status AS ENUM (
 );
 
 CREATE TABLE IF NOT EXISTS orders (
-    id SERIAL PRIMARY KEY,
-    user_id bigint NOT NULL REFERENCES users(id),
-    plan_id bigint NOT NULL REFERENCES plans(id),
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    plan_id BIGINT NOT NULL REFERENCES plans(id),
     total DECIMAL NOT NULL,
     status order_status NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),

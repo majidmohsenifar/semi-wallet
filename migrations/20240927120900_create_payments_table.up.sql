@@ -7,12 +7,13 @@ CREATE TYPE payment_status AS ENUM (
 );
 
 CREATE TABLE IF NOT EXISTS payments (
-    id bigserial PRIMARY KEY,
-    user_id bigint NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
     status payment_status NOT NULL,
-    amount numeric NOT NULL,
-    order_id bigint NOT NULL REFERENCES orders(id),
-    created_at timestamp  NOT NULL DEFAULT now(),
-    updated_at timestamp  NOT NULL DEFAULT now()
+    amount NUMERIC NOT NULL,
+    order_id BIGINT NOT NULL REFERENCES orders(id),
+    external_id VARCHAR(128),
+    payment_provider_code VARCHAR(48) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-

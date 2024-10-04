@@ -1,9 +1,6 @@
 use sqlx::{PgConnection, Pool, Postgres};
 
-use super::{
-    db::Repository,
-    models::{User, UserPlan},
-};
+use super::{db::Repository, models::UserPlan};
 
 pub struct CreateUserArgs {
     pub email: String,

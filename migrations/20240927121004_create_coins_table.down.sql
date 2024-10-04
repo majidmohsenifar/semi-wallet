@@ -1,2 +1,2 @@
 -- Add down migration script here
-drop TABLE IF EXISTS coins;
+DROP TABLE IF EXISTS coins;

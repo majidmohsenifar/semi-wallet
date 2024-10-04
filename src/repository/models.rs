@@ -1,7 +1,10 @@
+use std::fmt::Display;
+
 use chrono;
 use serde::{Deserialize, Serialize};
+use sqlx::types::BigDecimal;
 
-#[derive(Serialize, Deserialize, Debug, sqlx::Type)]
+#[derive(PartialEq, Serialize, Deserialize, Debug, sqlx::Type)]
 #[sqlx(type_name = "order_status", rename_all = "UPPERCASE")]
 #[serde(rename_all = "UPPERCASE")]
 pub enum OrderStatus {
@@ -10,7 +13,7 @@ pub enum OrderStatus {
     Failed,
 }
 
-#[derive(Serialize, Deserialize, Debug, sqlx::Type)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, sqlx::Type)]
 #[sqlx(type_name = "payment_status", rename_all = "UPPERCASE")]
 #[serde(rename_all = "UPPERCASE")]
 pub enum PaymentStatus {
@@ -19,12 +22,12 @@ pub enum PaymentStatus {
     Failed,
 }
 
-#[derive(sqlx::FromRow, Deserialize, Serialize)]
+#[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct Order {
     pub id: i64,
     pub user_id: i64,
     pub plan_id: i64,
-    pub total: f64,
+    pub total: BigDecimal,
     pub status: OrderStatus,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -35,7 +38,7 @@ pub struct Plan {
     pub id: i64,
     pub code: String,
     pub name: String,
-    pub price: sqlx::types::BigDecimal,
+    pub price: BigDecimal,
     pub duration: i16,
     pub save_percentage: i16,
 }
@@ -45,8 +48,10 @@ pub struct Payment {
     pub id: i64,
     pub user_id: i64,
     pub status: PaymentStatus,
-    pub amount: f64,
+    pub amount: BigDecimal,
     pub order_id: i64,
+    pub external_id: Option<String>,
+    pub payment_provider_code: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }

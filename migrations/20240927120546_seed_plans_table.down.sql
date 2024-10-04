@@ -1,2 +1,2 @@
 -- Add down migration script here
-TRUNCATE TABLE plans;
+TRUNCATE TABLE plans CASCADE;

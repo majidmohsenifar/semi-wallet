@@ -7,7 +7,10 @@ use stripe::{
 
 use crate::service::payment::service::{MakePaymentResult, EXPIRE_DURATION};
 
-use super::service::{CheckPaymentParams, CheckPaymentResult, MakePaymentParams};
+use super::{
+    error::PaymentError,
+    service::{CheckPaymentParams, CheckPaymentResult, MakePaymentParams},
+};
 
 pub struct StripeProvider {
     client: Client,
@@ -19,7 +22,10 @@ impl StripeProvider {
         StripeProvider { client }
     }
 
-    pub async fn make_payment(&self, params: MakePaymentParams) -> Result<MakePaymentResult, ()> {
+    pub async fn make_payment(
+        &self,
+        params: MakePaymentParams,
+    ) -> Result<MakePaymentResult, PaymentError> {
         let client_reference_id = params.payment_id.to_string();
 
         let mut checkout_params = CreateCheckoutSession::new();
@@ -50,7 +56,10 @@ impl StripeProvider {
         //replace unwarp with something proper
         let checkout_session_res = CheckoutSession::create(&self.client, checkout_params).await;
         if let Err(e) = checkout_session_res {
-            return Err(()); //TODO: handle this later
+            return Err(PaymentError::Unexpected {
+                message: "cannot create checkout session for stripe".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
         }
 
         let checkout_session_res = checkout_session_res.unwrap();
@@ -58,7 +67,7 @@ impl StripeProvider {
             if let Some(url) = checkout_session_res.url {
                 url
             } else {
-                return Err(());
+                return Err(PaymentError::EmptyUrl);
             }
         };
         Ok(MakePaymentResult {

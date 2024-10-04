@@ -1,2 +1,2 @@
 -- Add down migration script here
-drop TABLE IF EXISTS plans;
+DROP TABLE IF EXISTS plans;

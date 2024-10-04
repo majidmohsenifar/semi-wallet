@@ -6,6 +6,11 @@ use crate::repository::{db::Repository, models::Plan as PlanModel};
 
 use super::error::PlanError;
 
+pub const PLAN_CODE_1_MONTH: &str = "1_MONTH";
+pub const PLAN_CODE_3_MONTH: &str = "3_MONTH";
+pub const PLAN_CODE_6_MONTH: &str = "6_MONTH";
+pub const PLAN_CODE_12_MONTH: &str = "12_MONTH";
+
 #[derive(Clone)]
 pub struct Service {
     db: Pool<Postgres>,

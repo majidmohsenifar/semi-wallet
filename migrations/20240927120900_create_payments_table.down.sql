@@ -1,2 +1,3 @@
 -- Add down migration script here
-drop TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS payments;
+DROP TYPE IF EXISTS payment_status;

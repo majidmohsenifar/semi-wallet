@@ -1,15 +1,16 @@
+use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::error;
-use validator::Validate;
+use validator::{Validate, ValidationError};
 
 use crate::repository::db::Repository;
 use crate::repository::models::{OrderStatus, User};
 use crate::repository::order::CreateOrderArgs;
 use crate::service::payment::service::{CreatePaymentParams, Provider, Service as PaymentService};
-use crate::service::plan::error::PlanError;
-use crate::service::plan::service::Service as PlanService;
-
-use bigdecimal::ToPrimitive;
+use crate::service::plan::service::{
+    Service as PlanService, PLAN_CODE_12_MONTH, PLAN_CODE_1_MONTH, PLAN_CODE_3_MONTH,
+    PLAN_CODE_6_MONTH,
+};
 
 use super::error::OrderError;
 
@@ -22,13 +23,36 @@ pub struct Service {
 
 #[derive(serde::Deserialize, Validate)]
 pub struct CreateOrderParams {
+    #[validate(custom(function = "validate_plan_code"))]
     pub plan_code: String,
+    #[validate(custom(function = "validate_payment_provider"))]
     pub payment_provider: String,
 }
 
-#[derive(serde::Serialize)]
+fn validate_plan_code(plan_code: &str) -> Result<(), ValidationError> {
+    if [
+        PLAN_CODE_1_MONTH,
+        PLAN_CODE_3_MONTH,
+        PLAN_CODE_6_MONTH,
+        PLAN_CODE_12_MONTH,
+    ]
+    .contains(&plan_code)
+    {
+        return Ok(());
+    }
+    Err(ValidationError::new("invalid plan_code"))
+}
+
+fn validate_payment_provider(payment_provider: &str) -> Result<(), ValidationError> {
+    if Provider::from(payment_provider).is_some() {
+        return Ok(());
+    }
+    Err(ValidationError::new("invalid payment_provider"))
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct CreateOrderResult {
-    pub order_id: i64,
+    pub id: i64,
     pub status: String,
     pub payment_url: String,
     pub payment_provider: String,
@@ -64,11 +88,10 @@ impl Service {
         user: User,
         params: CreateOrderParams,
     ) -> Result<CreateOrderResult, OrderError> {
-        let payment_provider = Provider::from(&params.payment_provider);
-        if payment_provider.is_none() {
-            return Err(OrderError::InvalidPaymentProvider);
-        }
-        let payment_provider = payment_provider.unwrap();
+        let payment_provider = match Provider::from(&params.payment_provider) {
+            Some(pp) => pp,
+            None => return Err(OrderError::InvalidPaymentProvider),
+        };
         let plan = self.plan_service.get_plan_by_code(&params.plan_code).await;
         if let Err(e) = plan {
             match e {
@@ -97,17 +120,6 @@ impl Service {
         }
 
         let mut db_tx = db_tx.unwrap();
-
-        let plan_price = match plan.price.to_f64() {
-            Some(float) => float,
-            None => {
-                return Err(OrderError::Unexpected {
-                    message: "cannot convert plan price".to_string(),
-                    source: Box::new(PlanError::InvalidPrice)
-                        as Box<dyn std::error::Error + Send + Sync>,
-                });
-            }
-        };
         let order = self
             .repo
             .create_order(
@@ -115,13 +127,13 @@ impl Service {
                 CreateOrderArgs {
                     user_id: user.id,
                     plan_id: plan.id,
-                    total: plan_price,
+                    total: plan.price,
                     status: OrderStatus::Created,
                 },
             )
             .await;
         if let Err(e) = order {
-            error!("cannot create order due to err: {e}");
+            let _ = db_tx.rollback().await;
             return Err(OrderError::Unexpected {
                 message: "cannot create order".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -143,7 +155,8 @@ impl Service {
             .await;
 
         if let Err(e) = payment {
-            error!("cannot create payment due to err: {e}");
+            let _ = db_tx.rollback().await;
+            println!("errorrrrrrrrrrrrrrrrrrrrrr {e:?}");
             return Err(OrderError::Unexpected {
                 message: "cannot create payment".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -153,14 +166,15 @@ impl Service {
         let payment = payment.unwrap();
         let tx_res = db_tx.commit().await;
         if let Err(e) = tx_res {
-            error!("cannot commit db tx due to err: {e}");
+            //TODO: shouldn't we rollback? but how
+            //let _ = db_tx.rollback().await;
             return Err(OrderError::Unexpected {
                 message: "cannot insert to db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
         Ok(CreateOrderResult {
-            order_id: order.id,
+            id: order.id,
             status: "CREATED".to_string(), //TODO: handle this later
             payment_url: payment.url,
             payment_provider: params.payment_provider,

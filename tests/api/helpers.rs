@@ -1,7 +1,12 @@
-use semi_wallet::{http_server::HttpServer, repository::db::Repository};
+use semi_wallet::{
+    http_server::HttpServer,
+    repository::{db::Repository, models::User, user::CreateUserArgs},
+    service::auth::jwt,
+};
 use sqlx::{Connection, Executor, PgConnection, Pool, Postgres};
 use uuid::Uuid;
 
+use semi_wallet::service::auth::bcrypt;
 use semi_wallet::{client::postgres, config};
 
 use once_cell::sync::Lazy;
@@ -21,10 +26,16 @@ static TRACING: Lazy<()> = Lazy::new(|| {
     //};
 });
 
+//TODO: try to implement this later
+//static PLANS: Lazy<HashMap<&'static str, Plan>> = Lazy::new(|| {
+//todo!();
+//});
+
 pub struct TestApp {
     pub address: String,
     pub db: Pool<Postgres>,
     pub repo: Repository,
+    pub cfg: config::Settings,
 }
 
 pub async fn spawn_app() -> TestApp {
@@ -41,10 +52,35 @@ pub async fn spawn_app() -> TestApp {
     let address = format!("http://127.0.0.1:{}", http_server.port());
     tokio::spawn(http_server.run());
     let db = postgres::new_pg_pool(&cfg.db.dsn).await;
+    let repo = Repository::new();
+
     TestApp {
         address,
         db,
-        repo: Repository::new(),
+        repo,
+        cfg,
+    }
+}
+
+impl TestApp {
+    pub async fn get_jwt_token(&self, email: &str) -> (String, User) {
+        //TODO: or it is better to call register and login endpoint?
+        let mut conn = self.db.acquire().await.unwrap();
+        let encrypted_password = bcrypt::encrypt_password("12345678").unwrap();
+        let user = self
+            .repo
+            .create_user(
+                &mut conn,
+                CreateUserArgs {
+                    email: String::from(email),
+                    password: encrypted_password,
+                },
+            )
+            .await
+            .unwrap();
+
+        let token = jwt::create_jwt(self.cfg.jwt.secret.as_bytes(), String::from(email)).unwrap();
+        (token, user)
     }
 }
 
