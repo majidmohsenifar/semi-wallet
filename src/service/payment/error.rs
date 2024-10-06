@@ -4,8 +4,10 @@ use snafu::Snafu;
 pub enum PaymentError {
     #[snafu(display("something went wrong with amount calculation"))]
     InvalidAmount,
-    #[snafu(display("payment url is empty"))]
-    EmptyUrl,
+    #[snafu(display("stripe error: {message}"))]
+    StripeError { message: String },
+    #[snafu(display("payment with id {id} not found"))]
+    NotFound { id: i64 },
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,

@@ -42,6 +42,7 @@ impl HttpServer {
             repo.clone(),
             plan_service.clone(),
             payment_service,
+            cfg.stripe.secret,
         );
         let auth_service = AuthService::new(db_pool.clone(), user_service, cfg.jwt.secret);
 

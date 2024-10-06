@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
+use stripe::{EventObject, EventType};
 use tracing::error;
 use validator::{Validate, ValidationError};
 
 use crate::repository::db::Repository;
-use crate::repository::models::{OrderStatus, User};
+use crate::repository::models::{Order, OrderStatus, Payment, PaymentStatus, User};
 use crate::repository::order::CreateOrderArgs;
 use crate::service::payment::service::{CreatePaymentParams, Provider, Service as PaymentService};
 use crate::service::plan::service::{
@@ -19,6 +20,7 @@ pub struct Service {
     repo: Repository,
     plan_service: PlanService,
     payment_service: PaymentService,
+    stripe_secret: String,
 }
 
 #[derive(serde::Deserialize, Validate)]
@@ -73,12 +75,14 @@ impl Service {
         repo: Repository,
         plan_service: PlanService,
         payment_service: PaymentService,
+        stripe_secret: String,
     ) -> Self {
         Service {
             db,
             repo,
             plan_service,
             payment_service,
+            stripe_secret,
         }
     }
 
@@ -155,7 +159,6 @@ impl Service {
 
         if let Err(e) = payment {
             let _ = db_tx.rollback().await;
-            println!("errorrrrrrrrrrrrrrrrrrrrrr {e:?}");
             return Err(OrderError::Unexpected {
                 message: "cannot create payment".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -165,16 +168,21 @@ impl Service {
         let payment = payment.unwrap();
         let tx_res = db_tx.commit().await;
         if let Err(e) = tx_res {
-            //TODO: shouldn't we rollback? but how
+            //TODO: shouldn't we rollback? but how, the commit causes move of db_tx
             //let _ = db_tx.rollback().await;
             return Err(OrderError::Unexpected {
                 message: "cannot insert to db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
+        let status =
+            serde_json::to_string(&OrderStatus::Created).map_err(|e| OrderError::Unexpected {
+                message: "cannot convert status".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            })?;
         Ok(CreateOrderResult {
             id: order.id,
-            status: "CREATED".to_string(), //TODO: handle this later
+            status,
             payment_url: payment.url,
         })
     }
@@ -211,5 +219,96 @@ impl Service {
             return Err(OrderError::NotFound { id: params.id });
         }
         Ok(OrderDetailResult { id: order.id })
+    }
+
+    pub async fn handle_stripe_webhook(
+        &self,
+        stripe_signature_header: String,
+        request_body: &str,
+    ) -> Result<(), OrderError> {
+        let event = stripe::Webhook::construct_event(
+            request_body,
+            &stripe_signature_header,
+            &self.stripe_secret,
+        );
+        let event = match event {
+            Err(e) => {
+                return Err(OrderError::Unexpected {
+                    message: "cannot construct stripe webhook event".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                });
+            }
+            Ok(res) => res,
+        };
+        //we only cares about checkout session completed and expired
+        //so if the type is not one of those we return
+        if event.type_ != EventType::CheckoutSessionCompleted
+            && event.type_ != EventType::CheckoutSessionExpired
+        {
+            return Ok(());
+        }
+        let mut payment_id: i64 = 0;
+        if let EventObject::CheckoutSession(session) = event.data.object {
+            payment_id = match session.client_reference_id {
+                Some(r_id) => match r_id.parse::<i64>() {
+                    Ok(id) => id,
+                    Err(_) => {
+                        return Err(OrderError::InvalidStripeReferenceID { id: r_id });
+                    }
+                },
+                None => {
+                    ////TODO: this error is not correct, we should return better error related to object
+                    return Err(OrderError::InvalidStripeReferenceID { id: "".to_string() });
+                }
+            }
+        };
+        if payment_id == 0 {
+            //TODO: this error is not correct, we should return better error related to invalid
+            //data
+            return Err(OrderError::InvalidStripeReferenceID { id: "".to_string() });
+        }
+
+        //TODO: handle unwrap later
+        let check_payment = self
+            .payment_service
+            .check_payment(payment_id)
+            .await
+            .unwrap();
+
+        if check_payment.status == PaymentStatus::Created {
+            return Ok(());
+        }
+
+        let conn = self.db.acquire().await;
+        if let Err(e) = conn {
+            error!("cannot acquire db conn due to err {e}");
+            return Err(OrderError::Unexpected {
+                message: "cannot get order from db".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
+        }
+        let mut conn = conn.unwrap();
+
+        let o = self
+            .repo
+            .get_order_by_id(&mut conn, check_payment.payment.order_id)
+            .await
+            .unwrap();
+        match check_payment.status {
+            PaymentStatus::Created => Ok(()),
+            PaymentStatus::Failed => {
+                self.handle_successful_payment(check_payment.payment, o)
+                    .await
+            }
+            PaymentStatus::Completed => self.handle_failed_payment(check_payment.payment, o).await,
+        }
+    }
+
+    async fn handle_successful_payment(&self, p: Payment, o: Order) -> Result<(), OrderError> {
+        todo!();
+    }
+
+    async fn handle_failed_payment(&self, p: Payment, o: Order) -> Result<(), OrderError> {
+        todo!();
     }
 }

@@ -61,6 +61,20 @@ impl Repository {
         .await?;
         Ok(())
     }
+    pub async fn get_payment_by_id(
+        &self,
+        db: &Pool<Postgres>,
+        id: i64,
+    ) -> Result<Payment, sqlx::Error> {
+        let payment = sqlx::query_as::<_, Payment>(
+            "SELECT * FROM payments
+            WHERE id = $1 ",
+        )
+        .bind(id)
+        .fetch_one(db)
+        .await?;
+        Ok(payment)
+    }
 
     pub async fn get_last_payment_by_order_id(
         &self,

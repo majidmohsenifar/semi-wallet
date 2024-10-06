@@ -83,7 +83,6 @@ async fn get_coins_list_successful() {
     let bytes = response.bytes().await.unwrap();
     let res: ApiResponse<'_, Vec<Coin>> = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(res.message, "");
-    //TODO: validate the list itself
     let data = res.data.unwrap();
     assert_eq!(data.len(), 4);
     let btc = data.first().unwrap();

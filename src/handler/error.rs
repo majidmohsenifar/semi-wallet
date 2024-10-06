@@ -13,6 +13,7 @@ impl IntoResponse for OrderError {
             Self::NotFound { .. } => StatusCode::NOT_FOUND,
             Self::PlanNotFound { .. } => StatusCode::BAD_REQUEST,
             Self::InvalidPaymentProvider => StatusCode::BAD_REQUEST,
+            Self::InvalidStripeReferenceID { .. } => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (

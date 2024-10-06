@@ -5,7 +5,11 @@ use std::{collections::HashMap, fmt::Display};
 
 use sqlx::{Pool, Postgres};
 
-use crate::repository::{db::Repository, models::Payment, payment::CreatePaymentArgs};
+use crate::repository::{
+    db::Repository,
+    models::{Payment, PaymentStatus},
+    payment::CreatePaymentArgs,
+};
 
 pub const PAYMENT_PROVIDER_STRIPE: &str = "STRIPE";
 pub const PAYMENT_PROVIDER_BITPAY: &str = "BITPAY";
@@ -34,6 +38,12 @@ pub struct MakePaymentResult {
     pub external_id: String,
 }
 
+pub struct HandlerCheckPaymentResult {
+    pub status: PaymentStatus,
+    pub amount: f64,
+    pub metadata: String,
+}
+
 #[derive(Debug)]
 pub struct CreatePaymentParams {
     pub order_id: i64,
@@ -43,10 +53,18 @@ pub struct CreatePaymentParams {
 }
 
 #[derive(Debug)]
-pub struct CheckPaymentParams {}
+pub struct CheckPaymentParams {
+    pub external_id: String,
+    pub amount: f64,
+}
 
 #[derive(Debug)]
-pub struct CheckPaymentResult {}
+pub struct CheckPaymentResult {
+    pub status: PaymentStatus,
+    pub amount: f64,
+    pub metadata: String,
+    pub payment: Payment,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Provider {
@@ -174,6 +192,41 @@ impl Service {
         Ok(CreatePaymentResult {
             payment,
             url: make_payment_result.url,
+        })
+    }
+
+    pub async fn check_payment(&self, id: i64) -> Result<CheckPaymentResult, PaymentError> {
+        //TODO: handle all unwrap in this method
+        let p = self.repo.get_payment_by_id(&self.db, id).await;
+        let p = match p {
+            Ok(payment) => payment,
+            Err(e) => match e {
+                sqlx::Error::RowNotFound => return Err(PaymentError::NotFound { id }),
+                other => {
+                    return Err(PaymentError::Unexpected {
+                        message: "cannot get payment by id from db".to_string(),
+                        source: Box::new(other) as Box<dyn std::error::Error + Send + Sync>,
+                    })
+                }
+            },
+        };
+        let payment_provider = Provider::from(&p.payment_provider_code).unwrap();
+        let payment_handler = self.providers.get(&payment_provider).unwrap();
+        let check_payment_params = CheckPaymentParams {
+            amount: p.amount.to_f64().unwrap(),
+            external_id: p.external_id.clone().unwrap(),
+        };
+        let handler_check_payment_result = match payment_handler {
+            PaymentHandler::Stripe(stripe) => stripe.check_payment(check_payment_params).await?,
+            PaymentHandler::Bitpay(bitpay) => bitpay.check_payment(check_payment_params).await?,
+        };
+        //check_payment_result.status;
+
+        Ok(CheckPaymentResult {
+            status: handler_check_payment_result.status,
+            amount: handler_check_payment_result.amount,
+            metadata: handler_check_payment_result.metadata,
+            payment: p,
         })
     }
 }

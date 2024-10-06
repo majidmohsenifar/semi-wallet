@@ -1,6 +1,9 @@
 use super::{
     error::PaymentError,
-    service::{CheckPaymentParams, CheckPaymentResult, MakePaymentParams, MakePaymentResult},
+    service::{
+        CheckPaymentParams, CheckPaymentResult, HandlerCheckPaymentResult, MakePaymentParams,
+        MakePaymentResult,
+    },
 };
 
 pub struct BitpayProvider {}
@@ -13,12 +16,16 @@ impl BitpayProvider {
         &self,
         _params: MakePaymentParams,
     ) -> Result<MakePaymentResult, PaymentError> {
-        Ok(MakePaymentResult {
-            url: "".to_string(),         //TODO: handle this later
-            external_id: "".to_string(), //TODO: handle this later
-        })
+        todo!("impl later")
+        //Ok(MakePaymentResult {
+        //url: "".to_string(),         //TODO: handle this later
+        //external_id: "".to_string(), //TODO: handle this later
+        //})
     }
-    pub fn check_payment(&self, _params: CheckPaymentParams) -> CheckPaymentResult {
+    pub async fn check_payment(
+        &self,
+        _params: CheckPaymentParams,
+    ) -> Result<HandlerCheckPaymentResult, PaymentError> {
         todo!("impl later")
     }
 }

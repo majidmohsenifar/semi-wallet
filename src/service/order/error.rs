@@ -8,6 +8,8 @@ pub enum OrderError {
     PlanNotFound { code: String },
     #[snafu(display("invalid payment provider"))]
     InvalidPaymentProvider,
+    #[snafu(display("invalid reference_id {id}"))]
+    InvalidStripeReferenceID { id: String },
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,

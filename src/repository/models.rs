@@ -43,7 +43,7 @@ pub struct Plan {
     pub save_percentage: i16,
 }
 
-#[derive(sqlx::FromRow, Deserialize, Serialize)]
+#[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct Payment {
     pub id: i64,
     pub user_id: i64,

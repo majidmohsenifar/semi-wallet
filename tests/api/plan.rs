@@ -17,7 +17,6 @@ async fn get_plans_list_successful() {
     let bytes = response.bytes().await.unwrap();
     let res: ApiResponse<'_, Vec<Plan>> = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(res.message, "");
-    //TODO: validate the list itself
     let data = res.data.unwrap();
     assert_eq!(data.len(), 4);
     let plan1 = data.first().unwrap();
