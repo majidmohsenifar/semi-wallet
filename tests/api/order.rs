@@ -94,7 +94,8 @@ async fn create_order_1_month_stripe_successful() {
     let bytes = response.bytes().await.unwrap();
     let res: ApiResponse<'_, CreateOrderResult> = serde_json::from_slice(&bytes).unwrap();
     let data = res.data.unwrap();
-    //TODO: validate data fields
+    assert_eq!(&data.status, "CREATED");
+    assert_ne!(&data.payment_url, "");
 
     let mut conn = app.db.acquire().await.unwrap();
     let order = app.repo.get_order_by_id(&mut conn, data.id).await.unwrap();
@@ -104,7 +105,6 @@ async fn create_order_1_month_stripe_successful() {
     assert_eq!(order.plan_id, plan.id);
     assert_eq!(order.total, plan.price);
 
-    //TODO: check the db for payment
     let payment = app
         .repo
         .get_last_payment_by_order_id(&app.db, order.id)
@@ -115,4 +115,5 @@ async fn create_order_1_month_stripe_successful() {
     assert_eq!(payment.status, PaymentStatus::Created);
     assert_eq!(payment.amount, order.total);
     assert_eq!(payment.payment_provider_code, PAYMENT_PROVIDER_STRIPE);
+    assert_ne!(payment.external_id, None);
 }

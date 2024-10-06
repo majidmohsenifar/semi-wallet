@@ -16,6 +16,12 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
 
+  stripe-mock:
+    image: stripe/stripe-mock
+    ports:
+      - 12111:12111
+      - 12112:12112
+
 volumes:
     semi-wallet-db:
 

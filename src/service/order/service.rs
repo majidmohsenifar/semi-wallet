@@ -55,7 +55,6 @@ pub struct CreateOrderResult {
     pub id: i64,
     pub status: String,
     pub payment_url: String,
-    pub payment_provider: String,
 }
 
 #[derive(serde::Deserialize)]
@@ -177,7 +176,6 @@ impl Service {
             id: order.id,
             status: "CREATED".to_string(), //TODO: handle this later
             payment_url: payment.url,
-            payment_provider: params.payment_provider,
         })
     }
 

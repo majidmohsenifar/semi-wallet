@@ -68,7 +68,7 @@ impl Repository {
         order_id: i64,
     ) -> Result<Payment, sqlx::Error> {
         let payment = sqlx::query_as::<_, Payment>(
-            "SELECT payments
+            "SELECT * FROM payments
             WHERE order_id = $1 ORDER BY id DESC LIMIT 1",
         )
         .bind(order_id)

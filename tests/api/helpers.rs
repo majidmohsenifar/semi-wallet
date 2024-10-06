@@ -46,6 +46,8 @@ pub async fn spawn_app() -> TestApp {
         cfg.db.dsn = db_dsn;
         //consider the port 0, so the os will provide a free port
         cfg.server.address = "127.0.0.1:0".to_string();
+        cfg.stripe.url = "http://127.0.0.1:12111".to_string(); //it's been set in docker-compose
+        cfg.stripe.secret = "sk_test_123".to_string(); //it's been set in docker-compose
         cfg
     };
     let http_server = HttpServer::build(cfg.clone()).await;
