@@ -232,7 +232,7 @@ impl Service {
     ) -> Result<(), OrderError> {
         let event = stripe::Webhook::construct_event(
             request_body,
-            &stripe_signature_header,
+            stripe_signature_header,
             &self.stripe_secret,
         );
         let event = match event {
