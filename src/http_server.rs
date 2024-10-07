@@ -16,6 +16,7 @@ use crate::service::order::service::Service as OrderService;
 use crate::service::payment::service::Service as PaymentService;
 use crate::service::plan::service::Service as PlanService;
 use crate::service::user::service::Service as UserService;
+use crate::service::user_plan::service::Service as UserPlanService;
 
 pub struct HttpServer {
     router: Router,
@@ -37,11 +38,13 @@ impl HttpServer {
         let user_service = UserService::new(db_pool.clone(), repo.clone());
         let coin_service = CoinService::new(db_pool.clone(), repo.clone());
         let plan_service = PlanService::new(db_pool.clone(), repo.clone());
+        let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
         let order_service = OrderService::new(
             db_pool.clone(),
             repo.clone(),
             plan_service.clone(),
             payment_service,
+            user_plan_service,
             cfg.stripe.secret,
         );
         let auth_service = AuthService::new(db_pool.clone(), user_service, cfg.jwt.secret);
@@ -88,6 +91,11 @@ pub async fn get_router(shared_state: SharedState) -> Router {
             middleware::jwt_auth::auth_middleware,
         ));
 
+    let payments_routes = Router::new().route(
+        "/callback/stripe",
+        post(handler::payment::handle_stripe_webhook),
+    );
+
     let coin_routes = Router::new().route("/", get(handler::coin::coins_list));
 
     let plan_routes = Router::new().route("/", get(handler::plan::plans_list));
@@ -96,7 +104,8 @@ pub async fn get_router(shared_state: SharedState) -> Router {
         .nest("/auth", auth_routes)
         .nest("/orders", order_routes)
         .nest("/coins", coin_routes)
-        .nest("/plans", plan_routes);
+        .nest("/plans", plan_routes)
+        .nest("/payments", payments_routes);
 
     Router::new()
         .nest("/api/v1", api_routes)

@@ -12,9 +12,7 @@ use crate::{
 
 use super::{
     error::PaymentError,
-    service::{
-        CheckPaymentParams, CheckPaymentResult, HandlerCheckPaymentResult, MakePaymentParams,
-    },
+    service::{CheckPaymentParams, HandlerCheckPaymentResult, MakePaymentParams},
 };
 
 const STRIPE_METADATA_PAYMENT_ID_KEY: &str = "payment_id";

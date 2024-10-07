@@ -2,9 +2,10 @@ use sqlx::{PgConnection, Pool, Postgres};
 
 use super::{db::Repository, models::UserPlan};
 
-pub struct CreateUserArgs {
-    pub email: String,
-    pub password: String,
+pub struct CreateUserPlanOrUpdateExpiresAtArgs {
+    pub user_id: i64,
+    pub plan_id: i64,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl Repository {
@@ -23,7 +24,7 @@ impl Repository {
     pub async fn create_user_plan_or_update_expires_at(
         &self,
         conn: &mut PgConnection,
-        args: CreateUserArgs,
+        args: CreateUserPlanOrUpdateExpiresAtArgs,
     ) -> Result<UserPlan, sqlx::Error> {
         let res = sqlx::query_as::<_, UserPlan>(
             "INSERT INTO users_plans (
@@ -36,8 +37,9 @@ impl Repository {
                     SET expires_at =  users_plans.expires_at+EXCLUDED.expires_at, 
                     RETURNING *",
         )
-        .bind(args.email)
-        .bind(args.password)
+        .bind(args.user_id)
+        .bind(args.plan_id)
+        .bind(args.expires_at)
         .fetch_one(&mut *conn)
         .await?;
         Ok(res)

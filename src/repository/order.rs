@@ -51,4 +51,22 @@ impl Repository {
             .await?;
         Ok(res)
     }
+
+    pub async fn update_order_status(
+        &self,
+        conn: &mut PgConnection,
+        order_id: i64,
+        status: OrderStatus,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE orders
+                SET status = $2
+                WHERE id = $1;",
+        )
+        .bind(order_id)
+        .bind(status)
+        .fetch_one(&mut *conn)
+        .await?;
+        Ok(())
+    }
 }

@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use chrono;
 use serde::{Deserialize, Serialize};
 use sqlx::types::BigDecimal;
@@ -52,6 +50,7 @@ pub struct Payment {
     pub order_id: i64,
     pub external_id: Option<String>,
     pub payment_provider_code: String,
+    pub metadata: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }

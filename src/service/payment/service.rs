@@ -229,4 +229,18 @@ impl Service {
             payment: p,
         })
     }
+
+    pub async fn update_payment_status_metadata(
+        &self,
+        db_tx: &mut sqlx::Transaction<'_, Postgres>,
+        payment_id: i64,
+        status: PaymentStatus,
+        metadata: &str,
+    ) -> Result<(), sqlx::Error> {
+        let payment = self
+            .repo
+            .update_payment_status_metadata(db_tx, payment_id, status, metadata)
+            .await?;
+        Ok(())
+    }
 }

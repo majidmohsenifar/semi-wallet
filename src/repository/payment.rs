@@ -90,4 +90,26 @@ impl Repository {
         .await?;
         Ok(payment)
     }
+
+    pub async fn update_payment_status_metadata(
+        &self,
+        conn: &mut PgConnection,
+        payment_id: i64,
+        status: PaymentStatus,
+        metadata: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE payments
+            SET status = $2,
+                metadata = $3,
+             updated_at = NOW()
+            WHERE id = $1;",
+        )
+        .bind(payment_id)
+        .bind(status)
+        .bind(metadata)
+        .execute(&mut *conn)
+        .await?;
+        Ok(())
+    }
 }

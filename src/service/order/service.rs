@@ -8,10 +8,12 @@ use crate::repository::db::Repository;
 use crate::repository::models::{Order, OrderStatus, Payment, PaymentStatus, User};
 use crate::repository::order::CreateOrderArgs;
 use crate::service::payment::service::{CreatePaymentParams, Provider, Service as PaymentService};
+
 use crate::service::plan::service::{
     Service as PlanService, PLAN_CODE_12_MONTH, PLAN_CODE_1_MONTH, PLAN_CODE_3_MONTH,
     PLAN_CODE_6_MONTH,
 };
+use crate::service::user_plan::service::Service as UserPlanService;
 
 use super::error::OrderError;
 
@@ -20,6 +22,7 @@ pub struct Service {
     repo: Repository,
     plan_service: PlanService,
     payment_service: PaymentService,
+    user_plan_service: UserPlanService,
     stripe_secret: String,
 }
 
@@ -75,6 +78,7 @@ impl Service {
         repo: Repository,
         plan_service: PlanService,
         payment_service: PaymentService,
+        user_plan_service: UserPlanService,
         stripe_secret: String,
     ) -> Self {
         Service {
@@ -82,6 +86,7 @@ impl Service {
             repo,
             plan_service,
             payment_service,
+            user_plan_service,
             stripe_secret,
         }
     }
@@ -115,7 +120,6 @@ impl Service {
 
         let db_tx = self.db.begin().await;
         if let Err(e) = db_tx {
-            error!("cannot start db_tx due to err: {e}");
             return Err(OrderError::Unexpected {
                 message: "cannot start transaction".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -166,12 +170,12 @@ impl Service {
         }
 
         let payment = payment.unwrap();
-        let tx_res = db_tx.commit().await;
-        if let Err(e) = tx_res {
+        let commit_res = db_tx.commit().await;
+        if let Err(e) = commit_res {
             //TODO: shouldn't we rollback? but how, the commit causes move of db_tx
             //let _ = db_tx.rollback().await;
             return Err(OrderError::Unexpected {
-                message: "cannot insert to db".to_string(),
+                message: "cannot commit changes to db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
@@ -223,7 +227,7 @@ impl Service {
 
     pub async fn handle_stripe_webhook(
         &self,
-        stripe_signature_header: String,
+        stripe_signature_header: &str,
         request_body: &str,
     ) -> Result<(), OrderError> {
         let event = stripe::Webhook::construct_event(
@@ -268,7 +272,13 @@ impl Service {
             return Err(OrderError::InvalidStripeReferenceID { id: "".to_string() });
         }
 
-        //TODO: handle unwrap later
+        self.check_payment_and_finalize_order(payment_id).await
+    }
+
+    pub async fn check_payment_and_finalize_order(
+        &self,
+        payment_id: i64,
+    ) -> Result<(), OrderError> {
         let check_payment = self
             .payment_service
             .check_payment(payment_id)
@@ -297,18 +307,133 @@ impl Service {
         match check_payment.status {
             PaymentStatus::Created => Ok(()),
             PaymentStatus::Failed => {
-                self.handle_successful_payment(check_payment.payment, o)
+                self.handle_successful_payment(check_payment.payment, o, &check_payment.metadata)
                     .await
             }
-            PaymentStatus::Completed => self.handle_failed_payment(check_payment.payment, o).await,
+            PaymentStatus::Completed => {
+                self.handle_failed_payment(check_payment.payment, o, &check_payment.metadata)
+                    .await
+            }
         }
     }
 
-    async fn handle_successful_payment(&self, p: Payment, o: Order) -> Result<(), OrderError> {
-        todo!();
+    async fn handle_successful_payment(
+        &self,
+        p: Payment,
+        o: Order,
+        metadata: &str,
+    ) -> Result<(), OrderError> {
+        let plan = self
+            .plan_service
+            .get_plan_by_id(o.plan_id)
+            .await
+            .map_err(|e| OrderError::Unexpected {
+                message: "cannot get plan".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            })?;
+
+        let mut db_tx = self.db.begin().await.map_err(|e| OrderError::Unexpected {
+            message: "cannot start db transaction".to_string(),
+            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        })?;
+
+        let update_payment_res = self
+            .payment_service
+            .update_payment_status_metadata(&mut db_tx, p.id, PaymentStatus::Completed, metadata)
+            .await;
+
+        if let Err(e) = update_payment_res {
+            let _ = db_tx.rollback().await;
+            return Err(OrderError::Unexpected {
+                message: "cannot update payment status".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
+        }
+
+        let update_order_res = self
+            .repo
+            .update_order_status(&mut db_tx, o.id, OrderStatus::Completed)
+            .await;
+
+        if let Err(e) = update_order_res {
+            let _ = db_tx.rollback().await;
+            return Err(OrderError::Unexpected {
+                message: "cannot update order status".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
+        }
+
+        let create_user_plan_res = self
+            .user_plan_service
+            .create_user_plan_or_update_expires_at(&mut db_tx, o.user_id, plan)
+            .await;
+
+        if let Err(e) = create_user_plan_res {
+            let _ = db_tx.rollback().await;
+            return Err(OrderError::Unexpected {
+                message: "cannot create or update user_plan".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
+        }
+
+        let commit_res = db_tx.commit().await;
+        if let Err(e) = commit_res {
+            //TODO: shouldn't we rollback? but how, the commit causes move of db_tx
+            //let _ = db_tx.rollback().await;
+            return Err(OrderError::Unexpected {
+                message: "cannot commit changes to db".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
+        }
+        Ok(())
     }
 
-    async fn handle_failed_payment(&self, p: Payment, o: Order) -> Result<(), OrderError> {
-        todo!();
+    async fn handle_failed_payment(
+        &self,
+        p: Payment,
+        o: Order,
+        metadata: &str,
+    ) -> Result<(), OrderError> {
+        let mut db_tx = self.db.begin().await.map_err(|e| OrderError::Unexpected {
+            message: "cannot start db transaction".to_string(),
+            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        })?;
+
+        let update_payment_res = self
+            .payment_service
+            .update_payment_status_metadata(&mut db_tx, p.id, PaymentStatus::Failed, metadata)
+            .await;
+
+        if let Err(e) = update_payment_res {
+            let _ = db_tx.rollback().await;
+            return Err(OrderError::Unexpected {
+                message: "cannot update payment status".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
+        }
+
+        let update_order_res = self
+            .repo
+            .update_order_status(&mut db_tx, o.id, OrderStatus::Failed)
+            .await;
+
+        if let Err(e) = update_order_res {
+            let _ = db_tx.rollback().await;
+            return Err(OrderError::Unexpected {
+                message: "cannot update order status".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
+        }
+
+        let commit_res = db_tx.commit().await;
+        if let Err(e) = commit_res {
+            //TODO: shouldn't we rollback? but how, the commit causes move of db_tx
+            //let _ = db_tx.rollback().await;
+            return Err(OrderError::Unexpected {
+                message: "cannot commit changes to db".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            });
+        }
+        Ok(())
     }
 }
