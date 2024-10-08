@@ -61,11 +61,11 @@ impl Repository {
         sqlx::query(
             "UPDATE orders
                 SET status = $2
-                WHERE id = $1;",
+                WHERE id = $1",
         )
         .bind(order_id)
         .bind(status)
-        .fetch_one(&mut *conn)
+        .execute(&mut *conn)
         .await?;
         Ok(())
     }

@@ -1,6 +1,6 @@
 use chrono;
 use serde::{Deserialize, Serialize};
-use sqlx::types::BigDecimal;
+use sqlx::types::{BigDecimal, JsonValue};
 
 #[derive(PartialEq, Serialize, Deserialize, Debug, sqlx::Type)]
 #[sqlx(type_name = "order_status", rename_all = "UPPERCASE")]
@@ -50,7 +50,7 @@ pub struct Payment {
     pub order_id: i64,
     pub external_id: Option<String>,
     pub payment_provider_code: String,
-    pub metadata: String,
+    pub metadata: Option<JsonValue>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
@@ -75,7 +75,7 @@ pub struct User {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(sqlx::FromRow, Deserialize, Serialize)]
+#[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct UserPlan {
     pub user_id: i64,
     pub plan_id: i64,

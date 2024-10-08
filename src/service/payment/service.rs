@@ -180,7 +180,7 @@ impl Service {
         let make_payment_result = make_payment_result.unwrap();
         let update_payment_result = self
             .repo
-            .update_payment_external_id(db_tx, payment.id, make_payment_result.external_id)
+            .update_payment_external_id(db_tx, payment.id, &make_payment_result.external_id)
             .await;
         if let Err(e) = update_payment_result {
             return Err(PaymentError::Unexpected {
@@ -235,7 +235,7 @@ impl Service {
         db_tx: &mut sqlx::Transaction<'_, Postgres>,
         payment_id: i64,
         status: PaymentStatus,
-        metadata: &str,
+        metadata: Option<sqlx::types::JsonValue>,
     ) -> Result<(), sqlx::Error> {
         let payment = self
             .repo

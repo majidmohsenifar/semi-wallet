@@ -283,7 +283,10 @@ impl Service {
             .payment_service
             .check_payment(payment_id)
             .await
-            .unwrap();
+            .map_err(|e| OrderError::Unexpected {
+                message: "cannot check payment ".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            })?;
 
         if check_payment.status == PaymentStatus::Created {
             return Ok(());
@@ -307,11 +310,11 @@ impl Service {
         match check_payment.status {
             PaymentStatus::Created => Ok(()),
             PaymentStatus::Failed => {
-                self.handle_successful_payment(check_payment.payment, o, &check_payment.metadata)
+                self.handle_failed_payment(check_payment.payment, o, &check_payment.metadata)
                     .await
             }
             PaymentStatus::Completed => {
-                self.handle_failed_payment(check_payment.payment, o, &check_payment.metadata)
+                self.handle_successful_payment(check_payment.payment, o, &check_payment.metadata)
                     .await
             }
         }
@@ -337,9 +340,19 @@ impl Service {
             source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
         })?;
 
+        let metadata = serde_json::to_value(metadata).map_err(|e| OrderError::Unexpected {
+            message: "cannot convert metadata to json".to_string(),
+            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        })?;
+
         let update_payment_res = self
             .payment_service
-            .update_payment_status_metadata(&mut db_tx, p.id, PaymentStatus::Completed, metadata)
+            .update_payment_status_metadata(
+                &mut db_tx,
+                p.id,
+                PaymentStatus::Completed,
+                Some(metadata),
+            )
             .await;
 
         if let Err(e) = update_payment_res {
@@ -399,9 +412,14 @@ impl Service {
             source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
         })?;
 
+        let metadata = serde_json::to_value(metadata).map_err(|e| OrderError::Unexpected {
+            message: "cannot convert metadata to json".to_string(),
+            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        })?;
+
         let update_payment_res = self
             .payment_service
-            .update_payment_status_metadata(&mut db_tx, p.id, PaymentStatus::Failed, metadata)
+            .update_payment_status_metadata(&mut db_tx, p.id, PaymentStatus::Failed, Some(metadata))
             .await;
 
         if let Err(e) = update_payment_res {
@@ -418,6 +436,7 @@ impl Service {
             .await;
 
         if let Err(e) = update_order_res {
+            println!("hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee {e}");
             let _ = db_tx.rollback().await;
             return Err(OrderError::Unexpected {
                 message: "cannot update order status".to_string(),

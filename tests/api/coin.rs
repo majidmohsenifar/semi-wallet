@@ -23,7 +23,6 @@ async fn get_coins_list_successful() {
         )
         .await
         .unwrap();
-    println!("{:?}", btc_coin);
 
     let eth_coin = app
         .repo

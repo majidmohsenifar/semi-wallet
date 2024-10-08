@@ -47,7 +47,7 @@ impl Repository {
         &self,
         conn: &mut PgConnection,
         payment_id: i64,
-        external_id: String,
+        external_id: &str,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             "UPDATE payments
@@ -96,7 +96,7 @@ impl Repository {
         conn: &mut PgConnection,
         payment_id: i64,
         status: PaymentStatus,
-        metadata: &str,
+        metadata: Option<sqlx::types::JsonValue>,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             "UPDATE payments

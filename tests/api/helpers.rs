@@ -10,6 +10,7 @@ use semi_wallet::service::auth::bcrypt;
 use semi_wallet::{client::postgres, config};
 
 use once_cell::sync::Lazy;
+use wiremock::MockServer;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     //let default_filter_level = "info".to_string();
@@ -35,19 +36,21 @@ pub struct TestApp {
     pub address: String,
     pub db: Pool<Postgres>,
     pub repo: Repository,
+    pub stripe_server: MockServer,
     pub cfg: config::Settings,
 }
 
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
+
+    let stripe_server = MockServer::start().await;
     let cfg = {
         let mut cfg = config::get_configuration().expect("failed to get configuration");
         let db_dsn = configure_db(&cfg.db).await;
         cfg.db.dsn = db_dsn;
         //consider the port 0, so the os will provide a free port
         cfg.server.address = "127.0.0.1:0".to_string();
-        cfg.stripe.url = "http://127.0.0.1:12111".to_string(); //it's been set in docker-compose
-        cfg.stripe.secret = "sk_test_123".to_string(); //it's been set in docker-compose
+        cfg.stripe.url = stripe_server.uri();
         cfg
     };
     let http_server = HttpServer::build(cfg.clone()).await;
@@ -60,6 +63,7 @@ pub async fn spawn_app() -> TestApp {
         address,
         db,
         repo,
+        stripe_server,
         cfg,
     }
 }

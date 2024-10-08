@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::{collections::HashMap, str::FromStr};
 
 use stripe::{
@@ -118,7 +119,7 @@ impl StripeProvider {
                 return Err(PaymentError::Unexpected {
                     message: "cannot retrieve checkout session".to_string(),
                     source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-                })
+                });
             }
         };
         let status = match c_session.status {
