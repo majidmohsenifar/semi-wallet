@@ -24,7 +24,7 @@ async fn get_plans_list_successful() {
     assert_eq!(plan1.code, "1_MONTH");
     assert_eq!(plan1.name, "One Month");
     assert_eq!(plan1.price, 2.0);
-    assert_eq!(plan1.duration, 1);
+    assert_eq!(plan1.duration, 30);
     assert_eq!(plan1.save_percentage, 0);
 
     let plan2 = data.get(1).unwrap();
@@ -32,7 +32,7 @@ async fn get_plans_list_successful() {
     assert_eq!(plan2.code, "3_MONTH");
     assert_eq!(plan2.name, "3 Months");
     assert_eq!(plan2.price, 5.7);
-    assert_eq!(plan2.duration, 3);
+    assert_eq!(plan2.duration, 90);
     assert_eq!(plan2.save_percentage, 5);
 
     let plan3 = data.get(2).unwrap();
@@ -40,7 +40,7 @@ async fn get_plans_list_successful() {
     assert_eq!(plan3.code, "6_MONTH");
     assert_eq!(plan3.name, "6 Months");
     assert_eq!(plan3.price, 9.60);
-    assert_eq!(plan3.duration, 6);
+    assert_eq!(plan3.duration, 180);
     assert_eq!(plan3.save_percentage, 10);
 
     let plan4 = data.get(3).unwrap();
@@ -48,6 +48,6 @@ async fn get_plans_list_successful() {
     assert_eq!(plan4.code, "12_MONTH");
     assert_eq!(plan4.name, "12 Months");
     assert_eq!(plan4.price, 19.20);
-    assert_eq!(plan4.duration, 12);
+    assert_eq!(plan4.duration, 365);
     assert_eq!(plan4.save_percentage, 20);
 }

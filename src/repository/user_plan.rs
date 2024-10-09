@@ -5,7 +5,8 @@ use super::{db::Repository, models::UserPlan};
 pub struct CreateUserPlanOrUpdateExpiresAtArgs {
     pub user_id: i64,
     pub plan_id: i64,
-    pub expires_at: chrono::DateTime<chrono::Utc>,
+    pub order_id: i64,
+    pub days: i16,
 }
 
 impl Repository {
@@ -26,20 +27,26 @@ impl Repository {
         conn: &mut PgConnection,
         args: CreateUserPlanOrUpdateExpiresAtArgs,
     ) -> Result<UserPlan, sqlx::Error> {
+        //expires_at = users_plans.expires_at + (interval '1 day' * $4),
         let res = sqlx::query_as::<_, UserPlan>(
             "INSERT INTO users_plans (
-                    user_id,
-                    plan_id,
-                    expires_at,
-                    ) VALUES (
-                    $1, $2, $3
-                    ) ON CONFLICT (user_id,plan_id) DO UPDATE 
-                    SET expires_at =  users_plans.expires_at+EXCLUDED.expires_at, 
-                    RETURNING *",
+        user_id,
+        last_plan_id,
+        last_order_id,
+        expires_at
+        ) VALUES (
+        $1, $2, $3, NOW() + (interval '1 day' * $4)
+        ) ON CONFLICT (user_id) DO UPDATE
+        SET 
+        expires_at = CASE WHEN (users_plans.expires_at > NOW()) THEN users_plans.expires_at + (interval '1 day' * $4) ELSE NOW() + (interval '1 day' * $4) END, 
+        last_plan_id = EXCLUDED.last_plan_id,
+        last_order_id = EXCLUDED.last_order_id
+        RETURNING *",
         )
         .bind(args.user_id)
         .bind(args.plan_id)
-        .bind(args.expires_at)
+        .bind(args.order_id)
+        .bind(args.days)
         .fetch_one(&mut *conn)
         .await?;
         Ok(res)

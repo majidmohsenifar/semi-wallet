@@ -36,7 +36,7 @@ pub async fn auth_middleware(
     let user = state.auth_service.get_user_from_token(token).await;
 
     let user = match user {
-        Err(e) => {
+        Err(_e) => {
             return response::error(StatusCode::UNAUTHORIZED, "invalid token").into_response();
         }
         Ok(u) => u,

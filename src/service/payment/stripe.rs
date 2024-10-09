@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::{collections::HashMap, str::FromStr};
 
 use stripe::{

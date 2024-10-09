@@ -237,8 +237,7 @@ impl Service {
         status: PaymentStatus,
         metadata: Option<sqlx::types::JsonValue>,
     ) -> Result<(), sqlx::Error> {
-        let payment = self
-            .repo
+        self.repo
             .update_payment_status_metadata(db_tx, payment_id, status, metadata)
             .await?;
         Ok(())

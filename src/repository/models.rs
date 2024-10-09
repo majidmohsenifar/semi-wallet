@@ -77,7 +77,9 @@ pub struct User {
 
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct UserPlan {
+    pub id: i64,
     pub user_id: i64,
-    pub plan_id: i64,
+    pub last_plan_id: i64,
+    pub last_order_id: i64,
     pub expires_at: chrono::DateTime<chrono::Utc>,
 }

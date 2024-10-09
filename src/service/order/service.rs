@@ -184,6 +184,9 @@ impl Service {
                 message: "cannot convert status".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             })?;
+
+        let status = status.replace('"', "");
+
         Ok(CreateOrderResult {
             id: order.id,
             status,
@@ -378,7 +381,7 @@ impl Service {
 
         let create_user_plan_res = self
             .user_plan_service
-            .create_user_plan_or_update_expires_at(&mut db_tx, o.user_id, plan)
+            .create_user_plan_or_update_expires_at(&mut db_tx, o.user_id, plan, o.id)
             .await;
 
         if let Err(e) = create_user_plan_res {
@@ -436,7 +439,6 @@ impl Service {
             .await;
 
         if let Err(e) = update_order_res {
-            println!("hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee {e}");
             let _ = db_tx.rollback().await;
             return Err(OrderError::Unexpected {
                 message: "cannot update order status".to_string(),

@@ -21,16 +21,8 @@ impl Service {
         db_tx: &mut sqlx::Transaction<'_, Postgres>,
         user_id: i64,
         plan: Plan,
+        order_id: i64,
     ) -> Result<(), UserPlanError> {
-        let expires_at =
-            chrono::Utc::now().checked_add_days(chrono::Days::new(plan.duration as u64));
-        let expires_at = match expires_at {
-            Some(ex) => ex,
-            None => {
-                return Err(UserPlanError::InvalidExpiration);
-            }
-        };
-
         let res = self
             .repo
             .create_user_plan_or_update_expires_at(
@@ -38,7 +30,9 @@ impl Service {
                 CreateUserPlanOrUpdateExpiresAtArgs {
                     user_id,
                     plan_id: plan.id,
-                    expires_at,
+                    order_id,
+                    days: plan.duration + 1, //adding 1 just to be sure that it would be more than
+                                             //plan duration
                 },
             )
             .await;

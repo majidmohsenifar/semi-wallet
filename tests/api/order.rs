@@ -1,5 +1,12 @@
 use std::collections::HashMap;
 
+use std::str::FromStr;
+use stripe::{CheckoutSession, CheckoutSessionId, CheckoutSessionStatus};
+use wiremock::{
+    matchers::{method, path},
+    Mock, ResponseTemplate,
+};
+
 use semi_wallet::{
     handler::response::ApiResponse,
     repository::models::{OrderStatus, PaymentStatus},
@@ -81,6 +88,24 @@ async fn create_order_1_month_stripe_successful() {
         ("plan_code", PLAN_CODE_1_MONTH),
         ("payment_provider", PAYMENT_PROVIDER_STRIPE),
     ]);
+    let stripe_payment_url = "https://test.test".to_string();
+
+    let checkout_session = CheckoutSession {
+        id: CheckoutSessionId::from_str(
+            "cs_test_a11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S22u",
+        )
+        .unwrap(),
+        status: Some(CheckoutSessionStatus::Open),
+        url: Some(stripe_payment_url.clone()),
+        ..Default::default()
+    };
+
+    Mock::given(path("/v1/checkout/sessions"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&checkout_session))
+        .mount(&app.stripe_server)
+        .await;
+
     let response = client
         .post(&format!("{}/api/v1/orders/create", app.address))
         .bearer_auth(&token)
@@ -95,7 +120,7 @@ async fn create_order_1_month_stripe_successful() {
     let res: ApiResponse<'_, CreateOrderResult> = serde_json::from_slice(&bytes).unwrap();
     let data = res.data.unwrap();
     assert_eq!(&data.status, "CREATED");
-    assert_ne!(&data.payment_url, "");
+    assert_eq!(&data.payment_url, &stripe_payment_url);
 
     let mut conn = app.db.acquire().await.unwrap();
     let order = app.repo.get_order_by_id(&mut conn, data.id).await.unwrap();

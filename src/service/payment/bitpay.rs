@@ -1,8 +1,7 @@
 use super::{
     error::PaymentError,
     service::{
-        CheckPaymentParams, CheckPaymentResult, HandlerCheckPaymentResult, MakePaymentParams,
-        MakePaymentResult,
+        CheckPaymentParams, HandlerCheckPaymentResult, MakePaymentParams, MakePaymentResult,
     },
 };
 

@@ -143,7 +143,7 @@ impl Service {
     pub async fn get_user_from_token(&self, token: &str) -> Result<User, AuthError> {
         let email = jwt::get_email_from_token(self.jwt_secret.as_bytes(), token);
         let email = match email {
-            Err(e) => {
+            Err(_e) => {
                 return Err(AuthError::InvalidToken);
             }
             Ok(t) => t,
