@@ -220,7 +220,7 @@ async fn create_user_coin_coin_not_found() {
     );
     let bytes = response.bytes().await.unwrap();
     let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(res.message, "coin not found");
+    assert_eq!(res.message, "coin or network not found");
 }
 
 #[tokio::test]

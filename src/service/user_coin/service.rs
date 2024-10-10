@@ -86,14 +86,12 @@ impl Service {
             )
             .await
             .map_err(|e| match e {
-                sqlx::Error::RowNotFound => UserCoinError::CoinNotFound,
+                sqlx::Error::RowNotFound => UserCoinError::CoinOrNetworkNotFound,
                 other => UserCoinError::Unexpected {
                     message: "cannot get coin by symbol or network".to_string(),
                     source: Box::new(other) as Box<dyn std::error::Error + Send + Sync>,
                 },
             })?;
-
-        //TODO: we should check the network too to see if it is valid
 
         let id = self
             .repo
