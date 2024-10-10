@@ -1,6 +1,10 @@
+use std::collections::BTreeMap;
+
 use semi_wallet::{
     http_server::HttpServer,
-    repository::{db::Repository, models::User, user::CreateUserArgs},
+    repository::{
+        coin::CreateCoinArgs, db::Repository, models::Coin, models::User, user::CreateUserArgs,
+    },
     service::auth::jwt,
 };
 use sqlx::{Connection, Executor, PgConnection, Pool, Postgres};
@@ -32,6 +36,59 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 //todo!();
 //});
 
+static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
+    BTreeMap::from([
+        (
+            "BTC",
+            Coin {
+                id: 1,
+                symbol: "BTC".to_string(),
+                name: "Bitcoin".to_string(),
+                network: "BTC".to_string(),
+                logo: "btc.png".to_string(),
+                decimals: 8,
+                description: Some("Bitcoin is the best".to_string()),
+            },
+        ),
+        (
+            "ETH",
+            Coin {
+                id: 2,
+                symbol: "ETH".to_string(),
+                name: "Ethereum".to_string(),
+                network: "ETH".to_string(),
+                logo: "eth.png".to_string(),
+                decimals: 18,
+                description: Some("Ethereum is the second best".to_string()),
+            },
+        ),
+        (
+            "USDT_ETH",
+            Coin {
+                id: 3,
+                symbol: "USDT".to_string(),
+                name: "Tether".to_string(),
+                network: "ETH".to_string(),
+                logo: "usdt.png".to_string(),
+                decimals: 18,
+                description: Some("Tether is the third best".to_string()),
+            },
+        ),
+        (
+            "USDT_TRX",
+            Coin {
+                id: 4,
+                symbol: "USDT".to_string(),
+                name: "Tether".to_string(),
+                network: "TRX".to_string(),
+                logo: "usdt_trx.png".to_string(),
+                decimals: 18,
+                description: Some("Tether is the third best".to_string()),
+            },
+        ),
+    ])
+});
+
 pub struct TestApp {
     pub address: String,
     pub db: Pool<Postgres>,
@@ -42,6 +99,7 @@ pub struct TestApp {
 
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
+    Lazy::force(&COINS);
 
     let stripe_server = MockServer::start().await;
     let cfg = {
@@ -87,6 +145,25 @@ impl TestApp {
 
         let token = jwt::create_jwt(self.cfg.jwt.secret.as_bytes(), String::from(email)).unwrap();
         (token, user)
+    }
+
+    pub async fn insert_coins(&self) {
+        for (_, c) in COINS.iter() {
+            self.repo
+                .create_coin(
+                    &self.db,
+                    CreateCoinArgs {
+                        symbol: c.symbol.clone(),
+                        name: c.name.clone(),
+                        network: c.network.clone(),
+                        logo: c.logo.clone(),
+                        decimals: c.decimals,
+                        description: c.description.clone().unwrap(),
+                    },
+                )
+                .await
+                .unwrap();
+        }
     }
 }
 

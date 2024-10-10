@@ -1,9 +1,11 @@
 use snafu::Snafu;
 
 #[derive(Debug, Snafu)]
-pub enum CoinError {
+pub enum UserCoinError {
     #[snafu(display("coin not found"))]
-    NotFound,
+    CoinNotFound,
+    #[snafu(display("user coin not found"))]
+    UserCoinNotFound,
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,

@@ -38,7 +38,7 @@ impl Service {
         self.repo.get_plan_by_code(&self.db, code).await
     }
 
-    pub async fn plans_list(&self) -> Result<Vec<Plan>, PlanError> {
+    pub async fn get_plans_list(&self) -> Result<Vec<Plan>, PlanError> {
         let res = self.repo.get_all_plans(&self.db).await;
         if let Err(e) = res {
             return Err(PlanError::Unexpected {

@@ -83,3 +83,15 @@ pub struct UserPlan {
     pub last_order_id: i64,
     pub expires_at: chrono::DateTime<chrono::Utc>,
 }
+
+#[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
+pub struct UserCoin {
+    pub id: i64,
+    pub user_id: i64,
+    pub coin_id: i64,
+    pub address: String,
+    pub symbol: String,
+    pub network: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}

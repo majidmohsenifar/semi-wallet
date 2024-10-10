@@ -46,4 +46,19 @@ impl Repository {
         .await?;
         Ok(res)
     }
+
+    pub async fn get_coin_by_symbol_network(
+        &self,
+        db: &Pool<Postgres>,
+        symbol: &str,
+        network: &str,
+    ) -> Result<Coin, sqlx::Error> {
+        let res =
+            sqlx::query_as::<_, Coin>("SELECT * from coins WHERE symbol = $1 AND network = $2")
+                .bind(symbol)
+                .bind(network)
+                .fetch_one(db)
+                .await?;
+        Ok(res)
+    }
 }

@@ -4,3 +4,4 @@ pub mod helpers;
 pub mod order;
 pub mod plan;
 pub mod stripe_webhook;
+pub mod user_coin;

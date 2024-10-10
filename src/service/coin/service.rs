@@ -2,11 +2,12 @@ use sqlx::{Pool, Postgres};
 
 use tracing::error;
 
-use crate::repository::db::Repository;
+use crate::repository::{db::Repository, models::Coin as CoinModel};
 
 use super::error::CoinError;
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone)]
 pub struct Service {
     db: Pool<Postgres>,
     repo: Repository,
@@ -51,5 +52,15 @@ impl Service {
             });
         }
         Ok(coins)
+    }
+
+    pub async fn get_coin_by_symbol_network(
+        &self,
+        symbol: &str,
+        network: &str,
+    ) -> Result<CoinModel, sqlx::Error> {
+        self.repo
+            .get_coin_by_symbol_network(&self.db, symbol, network)
+            .await
     }
 }

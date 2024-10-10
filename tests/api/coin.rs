@@ -1,5 +1,4 @@
 use semi_wallet::handler::response::ApiResponse;
-use semi_wallet::repository::coin::CreateCoinArgs;
 use semi_wallet::service::coin::service::Coin;
 
 use crate::helpers::spawn_app;
@@ -8,70 +7,7 @@ use crate::helpers::spawn_app;
 async fn get_coins_list_successful() {
     let app = spawn_app().await;
 
-    let btc_coin = app
-        .repo
-        .create_coin(
-            &app.db,
-            CreateCoinArgs {
-                symbol: "BTC".to_string(),
-                name: "Bitcoin".to_string(),
-                network: "BTC".to_string(),
-                logo: "btc.png".to_string(),
-                decimals: 8,
-                description: "Bitcoin is the best".to_string(),
-            },
-        )
-        .await
-        .unwrap();
-
-    let eth_coin = app
-        .repo
-        .create_coin(
-            &app.db,
-            CreateCoinArgs {
-                symbol: "ETH".to_string(),
-                name: "Ethereum".to_string(),
-                network: "ETH".to_string(),
-                logo: "eth.png".to_string(),
-                decimals: 18,
-                description: "Ethereum is the second best".to_string(),
-            },
-        )
-        .await
-        .unwrap();
-
-    let usdt_eth_coin = app
-        .repo
-        .create_coin(
-            &app.db,
-            CreateCoinArgs {
-                symbol: "USDT".to_string(),
-                name: "Tether".to_string(),
-                network: "ETH".to_string(),
-                logo: "usdt.png".to_string(),
-                decimals: 18,
-                description: "Tether is the third best".to_string(),
-            },
-        )
-        .await
-        .unwrap();
-
-    let usdt_trx_coin = app
-        .repo
-        .create_coin(
-            &app.db,
-            CreateCoinArgs {
-                symbol: "USDT".to_string(),
-                name: "Tether".to_string(),
-                network: "TRX".to_string(),
-                logo: "usdt_trx.png".to_string(),
-                decimals: 18,
-                description: "Tether is the third best".to_string(),
-            },
-        )
-        .await
-        .unwrap();
-
+    app.insert_coins().await;
     let client = reqwest::Client::new();
     let response = client
         .get(&format!("{}/api/v1/coins", app.address))
@@ -85,7 +21,6 @@ async fn get_coins_list_successful() {
     let data = res.data.unwrap();
     assert_eq!(data.len(), 4);
     let btc = data.first().unwrap();
-    assert_eq!(btc.id, btc_coin.id);
     assert_eq!(btc.symbol, "BTC");
     assert_eq!(btc.name, "Bitcoin");
     assert_eq!(btc.logo, "btc.png");
@@ -94,7 +29,6 @@ async fn get_coins_list_successful() {
     assert_eq!(btc.description, "Bitcoin is the best");
 
     let eth = data.get(1).unwrap();
-    assert_eq!(eth.id, eth_coin.id);
     assert_eq!(eth.symbol, "ETH");
     assert_eq!(eth.name, "Ethereum");
     assert_eq!(eth.logo, "eth.png");
@@ -103,7 +37,6 @@ async fn get_coins_list_successful() {
     assert_eq!(eth.description, "Ethereum is the second best");
 
     let tether_eth = data.get(2).unwrap();
-    assert_eq!(tether_eth.id, usdt_eth_coin.id);
     assert_eq!(tether_eth.symbol, "USDT");
     assert_eq!(tether_eth.name, "Tether");
     assert_eq!(tether_eth.logo, "usdt.png");
@@ -113,7 +46,6 @@ async fn get_coins_list_successful() {
 
     let tether_trx = data.last().unwrap();
 
-    assert_eq!(tether_trx.id, usdt_trx_coin.id);
     assert_eq!(tether_trx.symbol, "USDT");
     assert_eq!(tether_trx.name, "Tether");
     assert_eq!(tether_trx.logo, "usdt_trx.png");

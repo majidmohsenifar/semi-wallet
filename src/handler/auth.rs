@@ -18,13 +18,13 @@ pub async fn register(State(state): State<SharedState>, req: Request) -> impl In
             return response::error(StatusCode::BAD_REQUEST, "invalid request body")
                 .into_response();
         }
-        Ok(t) => t,
+        Ok(b) => b,
     };
     let params: RegisterParams = match serde_json::from_slice(&body) {
         Err(e) => {
             return response::error(StatusCode::BAD_REQUEST, &e.to_string()).into_response();
         }
-        Ok(t) => t,
+        Ok(p) => p,
     };
 
     if let Err(e) = params.validate() {
@@ -57,13 +57,13 @@ pub async fn login(State(state): State<SharedState>, req: Request) -> impl IntoR
             return response::error(StatusCode::BAD_REQUEST, "invalid request body")
                 .into_response();
         }
-        Ok(t) => t,
+        Ok(b) => b,
     };
     let params: LoginParams = match serde_json::from_slice(&body) {
         Err(e) => {
             return response::error(StatusCode::BAD_REQUEST, &e.to_string()).into_response();
         }
-        Ok(t) => t,
+        Ok(p) => p,
     };
 
     if let Err(e) = params.validate() {

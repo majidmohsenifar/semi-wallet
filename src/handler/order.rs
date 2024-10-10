@@ -27,13 +27,13 @@ pub async fn create_order(
             return response::error(StatusCode::BAD_REQUEST, "invalid request body")
                 .into_response();
         }
-        Ok(t) => t,
+        Ok(b) => b,
     };
     let params: CreateOrderParams = match serde_json::from_slice(&body) {
         Err(e) => {
             return response::error(StatusCode::BAD_REQUEST, &e.to_string()).into_response();
         }
-        Ok(t) => t,
+        Ok(p) => p,
     };
 
     if let Err(e) = params.validate() {
