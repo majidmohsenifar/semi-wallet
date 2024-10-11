@@ -22,13 +22,22 @@ pub async fn register(State(state): State<SharedState>, req: Request) -> impl In
     };
     let params: RegisterParams = match serde_json::from_slice(&body) {
         Err(e) => {
-            return response::error(StatusCode::BAD_REQUEST, &e.to_string()).into_response();
+            let mut s = e.to_string();
+            if s.contains(" at") {
+                let parts: Vec<&str> = s.split(" at").collect();
+                s = parts[0].to_string();
+            }
+            return response::error(StatusCode::BAD_REQUEST, &s).into_response();
         }
         Ok(p) => p,
     };
 
     if let Err(e) = params.validate() {
-        return response::error(StatusCode::BAD_REQUEST, &e.to_string()).into_response();
+        if let Some((field, _)) = e.0.into_iter().next() {
+            return response::error(StatusCode::BAD_REQUEST, &format!("{} is not valid", field))
+                .into_response();
+        }
+        return response::error(StatusCode::BAD_REQUEST, "invalid payload").into_response();
     }
 
     if params.password != params.confirm_password {

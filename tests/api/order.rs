@@ -43,7 +43,7 @@ async fn create_order_without_token() {
 async fn create_order_invalid_inputs() {
     let app = spawn_app().await;
     //app.get
-    let (token, _) = app.get_jwt_token("test@test.com").await;
+    let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
     let client = reqwest::Client::new();
     let test_cases = vec![
         (HashMap::new(), "empty plan_code"),
@@ -82,7 +82,7 @@ async fn create_order_invalid_inputs() {
 async fn create_order_1_month_stripe_successful() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let (token, user) = app.get_jwt_token("test@test.com").await;
+    let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
     let plan_code = PLAN_CODE_1_MONTH;
     let body = HashMap::from([
         ("plan_code", PLAN_CODE_1_MONTH),

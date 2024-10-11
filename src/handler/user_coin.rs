@@ -126,7 +126,8 @@ pub async fn update_user_coin_address(
         }
         Some(val) => match val.as_str() {
             None => {
-                return response::error(StatusCode::BAD_REQUEST, "id is not i64").into_response();
+                return response::error(StatusCode::BAD_REQUEST, "address is not string")
+                    .into_response();
             }
             Some(addr) => addr,
         },

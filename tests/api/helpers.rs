@@ -127,7 +127,7 @@ pub async fn spawn_app() -> TestApp {
 }
 
 impl TestApp {
-    pub async fn get_jwt_token(&self, email: &str) -> (String, User) {
+    pub async fn get_jwt_token_and_user(&self, email: &str) -> (String, User) {
         //TODO: isn't it better to call register and login endpoint?
         let mut conn = self.db.acquire().await.unwrap();
         let encrypted_password = bcrypt::encrypt_password("12345678").unwrap();

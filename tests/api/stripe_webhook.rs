@@ -36,7 +36,7 @@ async fn stripe_webhook_still_created_first_time() {
 
     let mut conn = app.db.acquire().await.unwrap();
 
-    let (_, user) = app.get_jwt_token("test@test.test").await;
+    let (_, user) = app.get_jwt_token_and_user("test@test.test").await;
 
     let plan = app
         .repo
@@ -163,7 +163,7 @@ async fn stripe_webhook_expired() {
 
     let mut conn = app.db.acquire().await.unwrap();
 
-    let (_, user) = app.get_jwt_token("test@test.test").await;
+    let (_, user) = app.get_jwt_token_and_user("test@test.test").await;
 
     let plan = app
         .repo
@@ -289,7 +289,7 @@ async fn stripe_webhook_completed_first_time() {
 
     let mut conn = app.db.acquire().await.unwrap();
 
-    let (_, user) = app.get_jwt_token("test@test.test").await;
+    let (_, user) = app.get_jwt_token_and_user("test@test.test").await;
 
     let plan = app
         .repo
@@ -421,7 +421,7 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan() {
 
     let mut conn = app.db.acquire().await.unwrap();
 
-    let (_, user) = app.get_jwt_token("test@test.test").await;
+    let (_, user) = app.get_jwt_token_and_user("test@test.test").await;
 
     let plan = app
         .repo
@@ -580,7 +580,7 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan_buys
 
     let mut conn = app.db.acquire().await.unwrap();
 
-    let (_, user) = app.get_jwt_token("test@test.test").await;
+    let (_, user) = app.get_jwt_token_and_user("test@test.test").await;
 
     let plan = app
         .repo
@@ -746,7 +746,7 @@ async fn stripe_webhook_completed_already_has_old_expired_1_month_user_plan_buys
 
     let mut conn = app.db.acquire().await.unwrap();
 
-    let (_, user) = app.get_jwt_token("test@test.test").await;
+    let (_, user) = app.get_jwt_token_and_user("test@test.test").await;
 
     let plan = app
         .repo

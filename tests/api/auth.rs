@@ -16,21 +16,25 @@ async fn register_invalid_inputs() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let test_cases = vec![
-        (HashMap::new(), "empty email"),
+        (HashMap::new(), "missing field `email`"),
         (
             HashMap::from([
                 ("email", "invalid"),
                 ("password", "12345678"),
                 ("confirm_password", "12345678"),
             ]),
-            "invalid email",
+            "email is not valid",
         ),
         (
             HashMap::from([("email", "test@test.test")]),
-            "empty password",
+            "missing field `password`",
         ),
         (
-            HashMap::from([("email", "test@test.test"), ("password", "1234567")]),
+            HashMap::from([
+                ("email", "test@test.test"),
+                ("password", "1234567"),
+                ("confirm_password", "1234567"),
+            ]),
             "password with less than 8 character",
         ),
         (
@@ -57,9 +61,11 @@ async fn register_invalid_inputs() {
         assert_eq!(
             400,
             response.status().as_u16(),
-            "the api did not fail with 400 Bad Request when the payload has the problem {}",
-            msg
+            "the api did not fail with 400 Bad Request",
         );
+        //let bytes = response.bytes().await.unwrap();
+        //let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
+        //assert_eq!(res.message, msg);
     }
 }
 
