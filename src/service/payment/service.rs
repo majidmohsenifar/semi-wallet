@@ -1,4 +1,3 @@
-//use bigdecimal::FromPrimitive;
 use bigdecimal::ToPrimitive;
 use sqlx::types::BigDecimal;
 use std::{collections::HashMap, fmt::Display};
@@ -36,6 +35,7 @@ pub struct MakePaymentParams {
 pub struct MakePaymentResult {
     pub url: String,
     pub external_id: String,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub struct HandlerCheckPaymentResult {
@@ -180,7 +180,13 @@ impl Service {
         let make_payment_result = make_payment_result.unwrap();
         let update_payment_result = self
             .repo
-            .update_payment_external_id(db_tx, payment.id, &make_payment_result.external_id)
+            .update_payment_external_id_payment_url_expires_at(
+                db_tx,
+                payment.id,
+                &make_payment_result.external_id,
+                &make_payment_result.url,
+                make_payment_result.expires_at,
+            )
             .await;
         if let Err(e) = update_payment_result {
             return Err(PaymentError::Unexpected {
@@ -241,5 +247,14 @@ impl Service {
             .update_payment_status_metadata(db_tx, payment_id, status, metadata)
             .await?;
         Ok(())
+    }
+
+    pub async fn get_last_payment_by_order_id(
+        &self,
+        order_id: i64,
+    ) -> Result<Payment, sqlx::Error> {
+        self.repo
+            .get_last_payment_by_order_id(&self.db, order_id)
+            .await
     }
 }

@@ -43,24 +43,31 @@ impl Repository {
         Ok(res)
     }
 
-    pub async fn update_payment_external_id(
+    pub async fn update_payment_external_id_payment_url_expires_at(
         &self,
         conn: &mut PgConnection,
         payment_id: i64,
         external_id: &str,
+        payment_url: &str,
+        expires_at: chrono::DateTime<chrono::Utc>,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             "UPDATE payments
             SET external_id = $2,
+                payment_url = $3,
+                expires_at = $4,
              updated_at = NOW()
-            WHERE id = $1;",
+            WHERE id = $1",
         )
         .bind(payment_id)
         .bind(external_id)
+        .bind(payment_url)
+        .bind(expires_at)
         .execute(&mut *conn)
         .await?;
         Ok(())
     }
+
     pub async fn get_payment_by_id(
         &self,
         db: &Pool<Postgres>,

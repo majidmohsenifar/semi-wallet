@@ -1,5 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
+use chrono::Duration;
 use stripe::{
     CheckoutSession, CheckoutSessionId, Client, CreateCheckoutSession,
     CreateCheckoutSessionLineItems, CreateCheckoutSessionLineItemsPriceData,
@@ -36,11 +37,12 @@ impl StripeProvider {
     ) -> Result<MakePaymentResult, PaymentError> {
         let client_reference_id = params.payment_id.to_string();
 
+        let expires_at = chrono::Utc::now() + Duration::minutes(EXPIRE_DURATION);
         let mut checkout_params = CreateCheckoutSession::new();
         checkout_params.currency = Some(stripe::Currency::USD);
         checkout_params.mode = Some(stripe::CheckoutSessionMode::Payment);
         checkout_params.client_reference_id = Some(&client_reference_id);
-        checkout_params.expires_at = Some(EXPIRE_DURATION);
+        checkout_params.expires_at = Some(expires_at.timestamp());
         //checkout_params.success_url = Some("");
         //checkout_params.cancel_url = Some("");
         checkout_params.metadata = Some(HashMap::from([
@@ -90,6 +92,7 @@ impl StripeProvider {
         Ok(MakePaymentResult {
             url,
             external_id: checkout_session_res.id.to_string(),
+            expires_at,
         })
     }
 

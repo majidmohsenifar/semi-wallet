@@ -74,10 +74,12 @@ async fn stripe_webhook_still_created_first_time() {
         .unwrap();
 
     app.repo
-        .update_payment_external_id(
+        .update_payment_external_id_payment_url_expires_at(
             &mut conn,
             payment.id,
             "cs_test_a11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S22u",
+            "https://stripe.test.test",
+            chrono::Utc::now(),
         )
         .await
         .unwrap();
@@ -201,10 +203,12 @@ async fn stripe_webhook_expired() {
         .unwrap();
 
     app.repo
-        .update_payment_external_id(
+        .update_payment_external_id_payment_url_expires_at(
             &mut conn,
             payment.id,
             "cs_test_a11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S22u",
+            "https://stripe.test.test",
+            chrono::Utc::now(),
         )
         .await
         .unwrap();
@@ -327,10 +331,12 @@ async fn stripe_webhook_completed_first_time() {
         .unwrap();
 
     app.repo
-        .update_payment_external_id(
+        .update_payment_external_id_payment_url_expires_at(
             &mut conn,
             payment.id,
             "cs_test_a11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S22u",
+            "https://stripe.test.test",
+            chrono::Utc::now(),
         )
         .await
         .unwrap();
@@ -473,10 +479,12 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan() {
         .unwrap();
 
     app.repo
-        .update_payment_external_id(
+        .update_payment_external_id_payment_url_expires_at(
             &mut conn,
             payment.id,
             "cs_test_a11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S22u",
+            "https://stripe.test.test",
+            chrono::Utc::now(),
         )
         .await
         .unwrap();
@@ -638,10 +646,12 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan_buys
         .unwrap();
 
     app.repo
-        .update_payment_external_id(
+        .update_payment_external_id_payment_url_expires_at(
             &mut conn,
             payment.id,
             "cs_test_a11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S22u",
+            "https://stripe.test.test",
+            chrono::Utc::now(),
         )
         .await
         .unwrap();
@@ -804,10 +814,12 @@ async fn stripe_webhook_completed_already_has_old_expired_1_month_user_plan_buys
         .unwrap();
 
     app.repo
-        .update_payment_external_id(
+        .update_payment_external_id_payment_url_expires_at(
             &mut conn,
             payment.id,
             "cs_test_a11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S22u",
+            "https://stripe.test.test",
+            chrono::Utc::now(),
         )
         .await
         .unwrap();

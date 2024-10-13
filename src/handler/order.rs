@@ -51,11 +51,32 @@ pub async fn create_order(
     }
 }
 
+#[utoipa::path(
+        get,
+        path = "/api/v1/orders/detail",
+        responses(
+            (status = 200, description = "", body = OrderDetailResult),
+            (status = NOT_FOUND, description = "order not found")
+        ),
+        params(
+            ("id" = u64, Query, description = "order id"),
+        ),
+        security(
+            ("token_jwt" = [])
+        )
+)]
 pub async fn order_detail(
     State(state): State<SharedState>,
     Extension(user): Extension<User>,
-    Query(params): Query<OrderDetailParams>,
+    req: Request,
 ) -> impl IntoResponse {
+    let params: Query<OrderDetailParams> = match Query::try_from_uri(req.uri()) {
+        Ok(p) => p,
+        Err(_) => {
+            return response::error(StatusCode::BAD_REQUEST, "id is required and must be u64")
+                .into_response();
+        }
+    };
     let state = state.read().await;
     let res = state
         .order_service

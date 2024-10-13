@@ -50,6 +50,8 @@ pub struct Payment {
     pub order_id: i64,
     pub external_id: Option<String>,
     pub payment_provider_code: String,
+    pub payment_url: Option<String>,
+    pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
     pub metadata: Option<JsonValue>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,

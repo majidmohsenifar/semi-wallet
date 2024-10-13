@@ -63,6 +63,9 @@ async fn register_invalid_inputs() {
             response.status().as_u16(),
             "the api did not fail with 400 Bad Request",
         );
+        //TODO: we should handle the msg better for all the invalid inputs tests (login,
+        //create_order,...)
+
         //let bytes = response.bytes().await.unwrap();
         //let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
         //assert_eq!(res.message, msg);

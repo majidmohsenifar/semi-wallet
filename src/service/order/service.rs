@@ -1,7 +1,9 @@
+use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use stripe::{EventObject, EventType};
 use tracing::error;
+use utoipa::ToSchema;
 use validator::{Validate, ValidationError};
 
 use crate::repository::db::Repository;
@@ -67,9 +69,14 @@ pub struct OrderDetailParams {
     pub id: i64,
 }
 
-#[derive(Debug, serde::Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct OrderDetailResult {
     pub id: i64,
+    pub plan_code: String,
+    pub total: f64,
+    pub status: String,
+    pub payment_url: String,
+    pub payment_expire_date: i64,
 }
 
 impl Service {
@@ -213,7 +220,6 @@ impl Service {
             match e {
                 sqlx::Error::RowNotFound => return Err(OrderError::NotFound { id: params.id }),
                 _ => {
-                    error!("cannot get order due to err {e}");
                     return Err(OrderError::Unexpected {
                         message: "cannot get order from db".to_string(),
                         source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -225,7 +231,55 @@ impl Service {
         if order.user_id != user.id {
             return Err(OrderError::NotFound { id: params.id });
         }
-        Ok(OrderDetailResult { id: order.id })
+        let plan = self
+            .plan_service
+            .get_plan_by_id(order.plan_id)
+            .await
+            .map_err(|e| OrderError::Unexpected {
+                message: "cannot get plan from db".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            })?;
+
+        let payment = self
+            .payment_service
+            .get_last_payment_by_order_id(order.id)
+            .await
+            .map_err(|e| OrderError::Unexpected {
+                message: "cannot get payment from db".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            })?;
+
+        let status = serde_json::to_string(&order.status).map_err(|e| OrderError::Unexpected {
+            message: "cannot convert status".to_string(),
+            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        })?;
+        let status = status.replace('"', "");
+
+        let total = match order.total.to_f64() {
+            Some(float) => float,
+            None => {
+                return Err(OrderError::InvalidTotal);
+            }
+        };
+
+        let payment_expire_date = match payment.expires_at {
+            Some(t) => t.timestamp(),
+            None => 0,
+        };
+
+        let payment_url = match payment.payment_url {
+            Some(t) if order.status == OrderStatus::Created => t,
+            _ => "".to_string(),
+        };
+
+        Ok(OrderDetailResult {
+            id: order.id,
+            total,
+            status,
+            plan_code: plan.code,
+            payment_url: payment_url.to_string(),
+            payment_expire_date,
+        })
     }
 
     pub async fn handle_stripe_webhook(

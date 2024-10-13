@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use bigdecimal::{BigDecimal, FromPrimitive};
+use claim::assert_gt;
 use std::str::FromStr;
 use stripe::{CheckoutSession, CheckoutSessionId, CheckoutSessionStatus};
 use wiremock::{
@@ -8,10 +10,14 @@ use wiremock::{
 };
 
 use semi_wallet::{
-    handler::response::ApiResponse,
-    repository::models::{OrderStatus, PaymentStatus},
+    handler::response::{ApiError, ApiResponse},
+    repository::{
+        models::{OrderStatus, PaymentStatus},
+        payment::CreatePaymentArgs,
+    },
     service::{
-        order::service::CreateOrderResult, payment::service::PAYMENT_PROVIDER_STRIPE,
+        order::service::{CreateOrderResult, OrderDetailResult},
+        payment::service::PAYMENT_PROVIDER_STRIPE,
         plan::service::PLAN_CODE_1_MONTH,
     },
 };
@@ -141,4 +147,257 @@ async fn create_order_1_month_stripe_successful() {
     assert_eq!(payment.amount, order.total);
     assert_eq!(payment.payment_provider_code, PAYMENT_PROVIDER_STRIPE);
     assert_ne!(payment.external_id, None);
+}
+
+#[tokio::test]
+async fn order_detail_invalid_inputs() {
+    //we do not provide id in the url
+    let app = spawn_app().await;
+    let (token, _) = app.get_jwt_token_and_user("test@test.test").await;
+    let test_cases: Vec<(&[(&str, &str)], &str)> = vec![
+        (&[], "id is required and must be u64"),
+        (&[("id", "wrong")], "id is required and must be u64"),
+    ];
+
+    let client = reqwest::Client::new();
+    for (q, msg) in test_cases {
+        let response = client
+            .get(format!("{}/api/v1/orders/detail", app.address))
+            .bearer_auth(&token)
+            .query(q)
+            .send()
+            .await
+            .expect("failed to call api");
+
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "api did not return 400 Bad Request"
+        );
+        let bytes = response.bytes().await.unwrap();
+        let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(res.message, msg);
+    }
+}
+
+#[tokio::test]
+async fn order_detail_status_created_successful() {
+    let app = spawn_app().await;
+
+    let (token, user) = app.get_jwt_token_and_user("test@test.test").await;
+    //create order and payment
+    let plan = app
+        .repo
+        .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
+        .await
+        .unwrap();
+    let mut conn = app.db.acquire().await.unwrap();
+    let order = app
+        .repo
+        .create_order(
+            &mut conn,
+            semi_wallet::repository::order::CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Created,
+            },
+        )
+        .await
+        .unwrap();
+    let payment = app
+        .repo
+        .create_payment(
+            &mut conn,
+            CreatePaymentArgs {
+                user_id: user.id,
+                order_id: order.id,
+                payment_provider_code: PAYMENT_PROVIDER_STRIPE.to_string(),
+                amount: BigDecimal::from_f64(1.99).unwrap(),
+                status: PaymentStatus::Created,
+            },
+        )
+        .await
+        .unwrap();
+
+    app.repo
+        .update_payment_external_id_payment_url_expires_at(
+            &mut conn,
+            payment.id,
+            "stripe_id",
+            "https://stripe.test.test",
+            chrono::Utc::now(),
+        )
+        .await
+        .unwrap();
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(format!("{}/api/v1/orders/detail", app.address))
+        .query(&[("id", &order.id.to_string())])
+        .bearer_auth(&token)
+        .send()
+        .await
+        .expect("failed to call api");
+
+    assert_eq!(200, response.status().as_u16(), "api did not return 200 Ok");
+
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiResponse<'_, OrderDetailResult> = serde_json::from_slice(&bytes).unwrap();
+    let data = res.data.unwrap();
+
+    assert_eq!(data.id, order.id);
+    assert_eq!(data.plan_code, PLAN_CODE_1_MONTH);
+    assert_eq!(data.total, 1.99);
+    assert_eq!(data.status, "CREATED");
+    assert_eq!(data.payment_url, "https://stripe.test.test");
+    assert_gt!(data.payment_expire_date, 0);
+}
+
+#[tokio::test]
+async fn order_detail_status_completed_successful() {
+    let app = spawn_app().await;
+
+    let (token, user) = app.get_jwt_token_and_user("test@test.test").await;
+    //create order and payment
+    let plan = app
+        .repo
+        .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
+        .await
+        .unwrap();
+    let mut conn = app.db.acquire().await.unwrap();
+    let order = app
+        .repo
+        .create_order(
+            &mut conn,
+            semi_wallet::repository::order::CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Completed,
+            },
+        )
+        .await
+        .unwrap();
+    let payment = app
+        .repo
+        .create_payment(
+            &mut conn,
+            CreatePaymentArgs {
+                user_id: user.id,
+                order_id: order.id,
+                payment_provider_code: PAYMENT_PROVIDER_STRIPE.to_string(),
+                amount: BigDecimal::from_f64(1.99).unwrap(),
+                status: PaymentStatus::Completed,
+            },
+        )
+        .await
+        .unwrap();
+
+    app.repo
+        .update_payment_external_id_payment_url_expires_at(
+            &mut conn,
+            payment.id,
+            "stripe_id",
+            "https://stripe.test.test",
+            chrono::Utc::now(),
+        )
+        .await
+        .unwrap();
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(format!("{}/api/v1/orders/detail", app.address))
+        .query(&[("id", &order.id.to_string())])
+        .bearer_auth(&token)
+        .send()
+        .await
+        .expect("failed to call api");
+
+    assert_eq!(200, response.status().as_u16(), "api did not return 200 Ok");
+
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiResponse<'_, OrderDetailResult> = serde_json::from_slice(&bytes).unwrap();
+    let data = res.data.unwrap();
+
+    assert_eq!(data.id, order.id);
+    assert_eq!(data.plan_code, PLAN_CODE_1_MONTH);
+    assert_eq!(data.total, 1.99);
+    assert_eq!(data.status, "COMPLETED");
+    assert_eq!(data.payment_url, "");
+    assert_gt!(data.payment_expire_date, 0);
+}
+
+#[tokio::test]
+async fn order_detail_status_failed_successful() {
+    let app = spawn_app().await;
+
+    let (token, user) = app.get_jwt_token_and_user("test@test.test").await;
+    //create order and payment
+    let plan = app
+        .repo
+        .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
+        .await
+        .unwrap();
+    let mut conn = app.db.acquire().await.unwrap();
+    let order = app
+        .repo
+        .create_order(
+            &mut conn,
+            semi_wallet::repository::order::CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Failed,
+            },
+        )
+        .await
+        .unwrap();
+    let payment = app
+        .repo
+        .create_payment(
+            &mut conn,
+            CreatePaymentArgs {
+                user_id: user.id,
+                order_id: order.id,
+                payment_provider_code: PAYMENT_PROVIDER_STRIPE.to_string(),
+                amount: BigDecimal::from_f64(1.99).unwrap(),
+                status: PaymentStatus::Failed,
+            },
+        )
+        .await
+        .unwrap();
+
+    app.repo
+        .update_payment_external_id_payment_url_expires_at(
+            &mut conn,
+            payment.id,
+            "stripe_id",
+            "https://stripe.test.test",
+            chrono::Utc::now(),
+        )
+        .await
+        .unwrap();
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(format!("{}/api/v1/orders/detail", app.address))
+        .query(&[("id", &order.id.to_string())])
+        .bearer_auth(&token)
+        .send()
+        .await
+        .expect("failed to call api");
+
+    assert_eq!(200, response.status().as_u16(), "api did not return 200 Ok");
+
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiResponse<'_, OrderDetailResult> = serde_json::from_slice(&bytes).unwrap();
+    let data = res.data.unwrap();
+
+    assert_eq!(data.id, order.id);
+    assert_eq!(data.plan_code, PLAN_CODE_1_MONTH);
+    assert_eq!(data.total, 1.99);
+    assert_eq!(data.status, "FAILED");
+    assert_eq!(data.payment_url, "");
+    assert_gt!(data.payment_expire_date, 0);
 }

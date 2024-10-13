@@ -18,12 +18,29 @@ use crate::service::plan::service::Service as PlanService;
 use crate::service::user::service::Service as UserService;
 use crate::service::user_coin::service::Service as UserCoinService;
 use crate::service::user_plan::service::Service as UserPlanService;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 pub struct HttpServer {
     router: Router,
     listener: TcpListener,
     port: u16,
 }
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(handler::order::order_detail),
+    components(schemas(crate::service::order::service::OrderDetailResult)),
+
+//modifiers(&SecurityAddon),
+//nest(
+//(path = "/api/v1", api = todo::TodoApi)
+//),
+//tags(
+//(name = "semi-wallet", description = "semi wallet API")
+//)
+)]
+struct ApiDoc;
 
 impl HttpServer {
     pub async fn build(cfg: Settings) -> Self {
@@ -125,6 +142,14 @@ pub async fn get_router(shared_state: SharedState) -> Router {
         .nest("/user-coins", user_coin_routes);
 
     Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        //.merge(Redoc::with_url("/redoc", ApiDoc::openapi()))
+        // There is no need to create `RapiDoc::with_openapi` because the OpenApi is served
+        // via SwaggerUi instead we only make rapidoc to point to the existing doc.
+        //.merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
+        // Alternative to above
+        // .merge(RapiDoc::with_openapi("/api-docs/openapi2.json", ApiDoc::openapi()).path("/rapidoc"))
+        //.merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
         .nest("/api/v1", api_routes)
         .with_state(shared_state)
 }
