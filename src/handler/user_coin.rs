@@ -41,7 +41,7 @@ pub async fn user_coins_list(
         post,
         path = "/api/v1/user-coins/create",
         responses(
-            (status = OK, description = "", body = ApiResponseUserCoin),
+            (status = OK, description = "", body = ApiResponseCreateUserCoin),
             (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server"),
             (status = BAD_REQUEST, description = "plan not found"),
             (status = BAD_REQUEST, description = "invalid payment provider")
@@ -85,7 +85,7 @@ pub async fn create_user_coin(
         delete,
         path = "/api/v1/user-coins/delete",
         responses(
-            (status = OK, description = ""),
+            (status = OK, description = "", body = ApiResponseEmpty),
             (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server"),
             (status = NOT_FOUND, description = "not found"),
         ),
@@ -132,7 +132,7 @@ pub async fn delete_user_coin(
         patch,
         path = "/api/v1/user-coins/update-address",
         responses(
-            (status = OK, description = ""),
+            (status = OK, description = "", body = ApiResponseEmpty),
             (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server"),
             (status = NOT_FOUND, description = "not found"),
         ),

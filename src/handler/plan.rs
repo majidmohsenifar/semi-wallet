@@ -8,7 +8,7 @@ use super::response;
         get,
         path = "/api/v1/plans",
         responses(
-            (status = OK, description = "", body = Vec<Plan>),
+            (status = OK, description = "", body = ApiResponsePlanList),
             (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server")
         )
 )]

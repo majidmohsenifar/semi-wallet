@@ -22,7 +22,7 @@ use validator::Validate;
         post,
         path = "/api/v1/orders/create",
         responses(
-            (status = OK, description = "", body = CreateOrderResult),
+            (status = OK, description = "", body = ApiResponseCreateOrder),
             (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server"),
             (status = BAD_REQUEST, description = "plan not found"),
             (status = BAD_REQUEST, description = "invalid payment provider")
@@ -70,7 +70,7 @@ pub async fn create_order(
         get,
         path = "/api/v1/orders/detail",
         responses(
-            (status = OK, description = "", body = OrderDetailResult),
+            (status = OK, description = "", body = ApiResponseOrderDetailResult),
             (status = NOT_FOUND, description = "order not found"),
             (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server")
         ),

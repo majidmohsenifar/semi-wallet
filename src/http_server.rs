@@ -50,11 +50,15 @@ pub struct HttpServer {
     ),
     components(schemas(
         //aliases
+        crate::handler::response::ApiResponseCreateUserCoin, 
         crate::handler::response::ApiResponseUserCoinList,
-        crate::handler::response::ApiResponseUserCoin,
         crate::handler::response::ApiResponseLogin,
         crate::handler::response::ApiResponseRegister,
         crate::handler::response::ApiResponseCoinList,
+        crate::handler::response::ApiResponsePlanList,
+        crate::handler::response::ApiResponseCreateOrder,
+        crate::handler::response::ApiResponseOrderDetail,
+        crate::handler::response::ApiResponseEmpty,
 
         crate::service::order::service::OrderDetailResult,
         crate::service::order::service::CreateOrderParams,
@@ -67,6 +71,7 @@ pub struct HttpServer {
         crate::service::plan::service::Plan,
         crate::service::user_coin::service::CreateUserCoinParams,
         crate::service::user_coin::service::UserCoin,
+        crate::handler::response::Empty,
     )),
 tags(
 (name = "semi-wallet", description = "semi wallet API")
