@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
+use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::repository::models::User;
@@ -14,7 +15,7 @@ pub struct Service {
     jwt_secret: String,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct RegisterParams {
     #[validate(email)]
     pub email: String,
@@ -24,17 +25,17 @@ pub struct RegisterParams {
     pub confirm_password: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct RegisterResult {}
 
-#[derive(serde::Deserialize, Validate)]
+#[derive(serde::Deserialize, Validate, ToSchema)]
 pub struct LoginParams {
     #[validate(email)]
     pub email: String,
     pub password: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct LoginResult {
     pub token: String,
 }

@@ -12,6 +12,15 @@ use crate::{
 use super::response;
 use validator::Validate;
 
+#[utoipa::path(
+        post,
+        path = "/api/v1/auth/register",
+        responses(
+            (status = OK, description = "", body = ApiResponseRegister),
+            (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server"),
+        ),
+        request_body = RegisterParams
+)]
 pub async fn register(State(state): State<SharedState>, req: Request) -> impl IntoResponse {
     let body = match axum::body::to_bytes(req.into_body(), usize::MAX).await {
         Err(_) => {
@@ -60,6 +69,16 @@ pub async fn register(State(state): State<SharedState>, req: Request) -> impl In
     }
 }
 
+#[utoipa::path(
+        post,
+        path = "/api/v1/auth/login",
+        responses(
+            (status = OK, description = "", body = ApiResponseLogin),
+            (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server"),
+            (status = UNAUTHORIZED, description = "invalid credential"),
+        ),
+        request_body = LoginParams
+)]
 pub async fn login(State(state): State<SharedState>, req: Request) -> impl IntoResponse {
     let body = match axum::body::to_bytes(req.into_body(), usize::MAX).await {
         Err(_) => {

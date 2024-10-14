@@ -18,7 +18,13 @@ use crate::service::plan::service::Service as PlanService;
 use crate::service::user::service::Service as UserService;
 use crate::service::user_coin::service::Service as UserCoinService;
 use crate::service::user_plan::service::Service as UserPlanService;
-use utoipa::OpenApi;
+use utoipa::{
+    openapi::{
+        self,
+        security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
+    },
+    Modify, OpenApi,
+};
 use utoipa_swagger_ui::SwaggerUi;
 
 pub struct HttpServer {
@@ -29,18 +35,62 @@ pub struct HttpServer {
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(handler::order::order_detail),
-    components(schemas(crate::service::order::service::OrderDetailResult)),
+    modifiers(&SecurityAddon),
+    paths(
+        handler::order::order_detail,
+        handler::order::create_order,
+        handler::auth::register,
+        handler::auth::login,
+        handler::coin::coins_list,
+        handler::plan::plans_list,
+        handler::user_coin::user_coins_list,
+        handler::user_coin::create_user_coin,
+        handler::user_coin::delete_user_coin,
+        handler::user_coin::update_user_coin_address,
+    ),
+    components(schemas(
+        //aliases
+        crate::handler::response::ApiResponseUserCoinList,
+        crate::handler::response::ApiResponseUserCoin,
+        crate::handler::response::ApiResponseLogin,
+        crate::handler::response::ApiResponseRegister,
+        crate::handler::response::ApiResponseCoinList,
 
-//modifiers(&SecurityAddon),
-//nest(
-//(path = "/api/v1", api = todo::TodoApi)
-//),
-//tags(
-//(name = "semi-wallet", description = "semi wallet API")
-//)
+        crate::service::order::service::OrderDetailResult,
+        crate::service::order::service::CreateOrderParams,
+        crate::service::order::service::CreateOrderResult,
+        crate::service::auth::service::RegisterParams,
+        crate::service::auth::service::RegisterResult,
+        crate::service::auth::service::LoginParams,
+        crate::service::auth::service::LoginResult,
+        crate::service::coin::service::Coin,
+        crate::service::plan::service::Plan,
+        crate::service::user_coin::service::CreateUserCoinParams,
+        crate::service::user_coin::service::UserCoin,
+    )),
+tags(
+(name = "semi-wallet", description = "semi wallet API")
+)
 )]
 struct ApiDoc;
+
+struct SecurityAddon;
+
+impl Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "api_jwt_token",
+                SecurityScheme::Http(
+                    HttpBuilder::new()
+                        .scheme(HttpAuthScheme::Bearer)
+                        .bearer_format("JWT")
+                        .build(),
+                ),
+            )
+        }
+    }
+}
 
 impl HttpServer {
     pub async fn build(cfg: Settings) -> Self {

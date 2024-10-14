@@ -17,6 +17,21 @@ use validator::Validate;
 //use axum_macros::debug_handler;
 
 //#[debug_handler]
+
+#[utoipa::path(
+        post,
+        path = "/api/v1/orders/create",
+        responses(
+            (status = OK, description = "", body = CreateOrderResult),
+            (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server"),
+            (status = BAD_REQUEST, description = "plan not found"),
+            (status = BAD_REQUEST, description = "invalid payment provider")
+        ),
+        request_body = CreateOrderParams,
+        security(
+            ("api_jwt_token" = [])
+        )
+)]
 pub async fn create_order(
     State(state): State<SharedState>,
     Extension(user): Extension<User>,
@@ -55,14 +70,15 @@ pub async fn create_order(
         get,
         path = "/api/v1/orders/detail",
         responses(
-            (status = 200, description = "", body = OrderDetailResult),
-            (status = NOT_FOUND, description = "order not found")
+            (status = OK, description = "", body = OrderDetailResult),
+            (status = NOT_FOUND, description = "order not found"),
+            (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server")
         ),
         params(
             ("id" = u64, Query, description = "order id"),
         ),
         security(
-            ("token_jwt" = [])
+            ("api_jwt_token" = [])
         )
 )]
 pub async fn order_detail(

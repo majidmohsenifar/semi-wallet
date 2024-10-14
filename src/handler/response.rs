@@ -1,7 +1,20 @@
 use axum::{http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize)]
+use crate::service::user_coin::service::UserCoin;
+use crate::service::auth::service::LoginResult;
+use crate::service::auth::service::RegisterResult;
+use crate::service::coin::service::Coin;
+
+#[derive(Serialize, Deserialize, ToSchema)]
+#[aliases(
+    ApiResponseUserCoin = ApiResponse<'a,UserCoin>, 
+    ApiResponseUserCoinList = ApiResponse<'a,Vec<UserCoin>>,
+    ApiResponseLogin = ApiResponse<'a,LoginResult>,
+    ApiResponseRegister = ApiResponse<'a,RegisterResult>,
+    ApiResponseCoinList = ApiResponse<'a,Vec<Coin>>,
+)]
 pub struct ApiResponse<'a, T: Serialize> {
     pub data: Option<T>,
     pub message: &'a str,

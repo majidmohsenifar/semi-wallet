@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
+use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::repository::{db::Repository, models::User, user_coin::CreateUserCoinArgs};
@@ -14,18 +15,18 @@ pub struct Service {
     coin_service: CoinService,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct UserCoin {
     pub id: i64,
     pub coin_id: i64,
     pub address: String,
     pub symbol: String,
     pub network: String,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct CreateUserCoinParams {
     #[validate(length(min = 1))]
     pub address: String,
@@ -61,8 +62,8 @@ impl Service {
                 address: uc.address,
                 symbol: uc.symbol,
                 network: uc.network,
-                created_at: uc.created_at,
-                updated_at: uc.updated_at,
+                created_at: uc.created_at.timestamp(),
+                updated_at: uc.updated_at.timestamp(),
             })
             .collect();
 
@@ -117,8 +118,8 @@ impl Service {
             address: params.address,
             symbol: coin.symbol,
             network: coin.network,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
+            created_at: chrono::Utc::now().timestamp(),
+            updated_at: chrono::Utc::now().timestamp(),
         })
     }
 

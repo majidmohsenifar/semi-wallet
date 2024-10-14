@@ -28,7 +28,7 @@ pub struct Service {
     stripe_secret: String,
 }
 
-#[derive(serde::Deserialize, Validate)]
+#[derive(serde::Deserialize, Validate, ToSchema)]
 pub struct CreateOrderParams {
     #[validate(custom(function = "validate_plan_code"))]
     pub plan_code: String,
@@ -57,7 +57,7 @@ fn validate_payment_provider(payment_provider: &str) -> Result<(), ValidationErr
     Err(ValidationError::new("invalid payment_provider"))
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct CreateOrderResult {
     pub id: i64,
     pub status: String,

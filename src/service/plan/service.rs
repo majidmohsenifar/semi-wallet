@@ -1,6 +1,7 @@
 use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
+use utoipa::ToSchema;
 
 use crate::repository::{db::Repository, models::Plan as PlanModel};
 
@@ -17,7 +18,7 @@ pub struct Service {
     repo: Repository,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct Plan {
     pub id: i64,
     pub code: String,

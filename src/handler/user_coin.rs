@@ -14,6 +14,17 @@ use validator::Validate;
 
 use super::response;
 
+#[utoipa::path(
+        get,
+        path = "/api/v1/user-coins",
+        responses(
+            (status = OK, description = "", body = ApiResponseUserCoinList),
+            (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server")
+        ),
+        security(
+            ("api_jwt_token" = [])
+        )
+)]
 pub async fn user_coins_list(
     State(state): State<SharedState>,
     Extension(user): Extension<User>,
@@ -26,6 +37,20 @@ pub async fn user_coins_list(
     }
 }
 
+#[utoipa::path(
+        post,
+        path = "/api/v1/user-coins/create",
+        responses(
+            (status = OK, description = "", body = ApiResponseUserCoin),
+            (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server"),
+            (status = BAD_REQUEST, description = "plan not found"),
+            (status = BAD_REQUEST, description = "invalid payment provider")
+        ),
+        request_body = CreateUserCoinParams,
+        security(
+            ("api_jwt_token" = [])
+        )
+)]
 pub async fn create_user_coin(
     State(state): State<SharedState>,
     Extension(user): Extension<User>,
@@ -56,6 +81,19 @@ pub async fn create_user_coin(
     }
 }
 
+#[utoipa::path(
+        delete,
+        path = "/api/v1/user-coins/delete",
+        responses(
+            (status = OK, description = ""),
+            (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server"),
+            (status = NOT_FOUND, description = "not found"),
+        ),
+        request_body = CreateUserCoinParams,
+        security(
+            ("api_jwt_token" = [])
+        )
+)]
 pub async fn delete_user_coin(
     State(state): State<SharedState>,
     Extension(user): Extension<User>,
@@ -89,6 +127,20 @@ pub async fn delete_user_coin(
         Err(err) => err.into_response(),
     }
 }
+
+#[utoipa::path(
+        patch,
+        path = "/api/v1/user-coins/update-address",
+        responses(
+            (status = OK, description = ""),
+            (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server"),
+            (status = NOT_FOUND, description = "not found"),
+        ),
+        request_body = CreateUserCoinParams,
+        security(
+            ("api_jwt_token" = [])
+        )
+)]
 
 pub async fn update_user_coin_address(
     State(state): State<SharedState>,

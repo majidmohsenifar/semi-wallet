@@ -1,6 +1,7 @@
 use sqlx::{Pool, Postgres};
 
 use tracing::error;
+use utoipa::ToSchema;
 
 use crate::repository::{db::Repository, models::Coin as CoinModel};
 
@@ -13,7 +14,7 @@ pub struct Service {
     repo: Repository,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct Coin {
     pub id: i64,
     pub symbol: String,
