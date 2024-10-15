@@ -1,7 +1,7 @@
 use super::{
     error::PaymentError,
     service::{
-        CheckPaymentParams, HandlerCheckPaymentResult, MakePaymentParams, MakePaymentResult,
+        CheckPaymentHandlerResult, CheckPaymentParams, MakePaymentParams, MakePaymentResult,
     },
 };
 
@@ -24,7 +24,7 @@ impl BitpayProvider {
     pub async fn check_payment(
         &self,
         _params: CheckPaymentParams,
-    ) -> Result<HandlerCheckPaymentResult, PaymentError> {
+    ) -> Result<CheckPaymentHandlerResult, PaymentError> {
         todo!("impl later")
     }
 }

@@ -37,8 +37,9 @@ pub struct HttpServer {
 #[openapi(
     modifiers(&SecurityAddon),
     paths(
-        handler::order::order_detail,
         handler::order::create_order,
+        handler::order::order_detail,
+        handler::order::user_orders_list,
         handler::auth::register,
         handler::auth::login,
         handler::coin::coins_list,
@@ -47,28 +48,34 @@ pub struct HttpServer {
         handler::user_coin::create_user_coin,
         handler::user_coin::delete_user_coin,
         handler::user_coin::update_user_coin_address,
+        handler::payment::payment_providers,
     ),
     components(schemas(
         //aliases
         crate::handler::response::ApiResponseCreateUserCoin, 
-        crate::handler::response::ApiResponseUserCoinList,
+        crate::handler::response::ApiResponseUserCoinsList,
         crate::handler::response::ApiResponseLogin,
         crate::handler::response::ApiResponseRegister,
-        crate::handler::response::ApiResponseCoinList,
-        crate::handler::response::ApiResponsePlanList,
+        crate::handler::response::ApiResponseCoinsList,
+        crate::handler::response::ApiResponsePlansList,
         crate::handler::response::ApiResponseCreateOrder,
         crate::handler::response::ApiResponseOrderDetail,
+        crate::handler::response::ApiResponseUserOrdersList,
+        crate::handler::response::ApiResponsePaymentProvidersList,
         crate::handler::response::ApiResponseEmpty,
 
         crate::service::order::service::OrderDetailResult,
         crate::service::order::service::CreateOrderParams,
+        crate::service::order::service::GetUserOrdersListParams,
         crate::service::order::service::CreateOrderResult,
+        crate::service::order::service::Order,
         crate::service::auth::service::RegisterParams,
         crate::service::auth::service::RegisterResult,
         crate::service::auth::service::LoginParams,
         crate::service::auth::service::LoginResult,
         crate::service::coin::service::Coin,
         crate::service::plan::service::Plan,
+        crate::service::payment::service::PaymentProvider,
         crate::service::user_coin::service::CreateUserCoinParams,
         crate::service::user_coin::service::UserCoin,
         crate::handler::response::Empty,
@@ -116,7 +123,7 @@ impl HttpServer {
             db_pool.clone(),
             repo.clone(),
             plan_service.clone(),
-            payment_service,
+            payment_service.clone(),
             user_plan_service,
             cfg.stripe.secret,
         );
@@ -130,6 +137,7 @@ impl HttpServer {
             plan_service,
             auth_service,
             user_coin_service,
+            payment_service,
         };
         let shared_state = Arc::new(RwLock::new(app_state));
 
@@ -160,6 +168,7 @@ pub async fn get_router(shared_state: SharedState) -> Router {
         .route("/login", post(handler::auth::login));
 
     let order_routes = Router::new()
+        .route("/", get(handler::order::user_orders_list))
         .route("/create", post(handler::order::create_order))
         .route("/detail", get(handler::order::order_detail))
         .layer(axum_middleware::from_fn_with_state(
@@ -167,10 +176,9 @@ pub async fn get_router(shared_state: SharedState) -> Router {
             middleware::jwt_auth::auth_middleware,
         ));
 
-    let payments_routes = Router::new().route(
-        "/callback/stripe",
-        post(handler::payment::handle_stripe_webhook),
-    );
+    let payments_routes = Router::new()
+        .route("/callback/stripe",post(handler::payment::handle_stripe_webhook))
+        .route("/providers", get(handler::payment::payment_providers));
 
     let coin_routes = Router::new().route("/", get(handler::coin::coins_list));
 

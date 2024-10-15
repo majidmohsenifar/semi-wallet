@@ -48,7 +48,7 @@ impl Service {
             });
         }
         let res = res.unwrap();
-        let mut coins = Vec::with_capacity(res.len());
+        let mut plans = Vec::with_capacity(res.len());
         for p in res {
             let price = match p.price.to_f64() {
                 Some(float) => float,
@@ -56,7 +56,7 @@ impl Service {
                     return Err(PlanError::InvalidPrice);
                 }
             };
-            coins.push(Plan {
+            plans.push(Plan {
                 id: p.id,
                 code: p.code,
                 name: p.name,
@@ -65,6 +65,6 @@ impl Service {
                 save_percentage: p.save_percentage,
             });
         }
-        Ok(coins)
+        Ok(plans)
     }
 }

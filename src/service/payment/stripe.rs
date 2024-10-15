@@ -13,7 +13,7 @@ use crate::{
 
 use super::{
     error::PaymentError,
-    service::{CheckPaymentParams, HandlerCheckPaymentResult, MakePaymentParams},
+    service::{CheckPaymentHandlerResult, CheckPaymentParams, MakePaymentParams},
 };
 
 const STRIPE_METADATA_PAYMENT_ID_KEY: &str = "payment_id";
@@ -99,7 +99,7 @@ impl StripeProvider {
     pub async fn check_payment(
         &self,
         params: CheckPaymentParams,
-    ) -> Result<HandlerCheckPaymentResult, PaymentError> {
+    ) -> Result<CheckPaymentHandlerResult, PaymentError> {
         let checkout_session_id = match CheckoutSessionId::from_str(&params.external_id) {
             Ok(id) => id,
             Err(e) => {
@@ -145,7 +145,7 @@ impl StripeProvider {
             message: "amount_total is empty".to_string(),
         })?;
         let amount = amount as f64 / 100.0;
-        Ok(HandlerCheckPaymentResult {
+        Ok(CheckPaymentHandlerResult {
             amount,
             status,
             metadata,

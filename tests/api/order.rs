@@ -13,10 +13,11 @@ use semi_wallet::{
     handler::response::{ApiError, ApiResponse},
     repository::{
         models::{OrderStatus, PaymentStatus},
+        order::CreateOrderArgs,
         payment::CreatePaymentArgs,
     },
     service::{
-        order::service::{CreateOrderResult, OrderDetailResult},
+        order::service::{CreateOrderResult, Order, OrderDetailResult},
         payment::service::PAYMENT_PROVIDER_STRIPE,
         plan::service::PLAN_CODE_1_MONTH,
     },
@@ -119,7 +120,7 @@ async fn create_order_1_month_stripe_successful() {
         .send()
         .await
         .expect("failed to execute request");
-    assert_eq!(200, response.status().as_u16(), "the api call was not Ok");
+    assert_eq!(200, response.status().as_u16(), "the api call was not Ok",);
 
     let plan = app.repo.get_plan_by_code(&app.db, plan_code).await.unwrap();
     let bytes = response.bytes().await.unwrap();
@@ -400,4 +401,183 @@ async fn order_detail_status_failed_successful() {
     assert_eq!(data.status, "FAILED");
     assert_eq!(data.payment_url, "");
     assert_gt!(data.payment_expire_date, 0);
+}
+
+#[tokio::test]
+async fn user_orders_without_token() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(format!("{}/api/v1/orders", app.address))
+        .send()
+        .await
+        .expect("failed to call api");
+
+    assert_eq!(
+        401,
+        response.status().as_u16(),
+        "the api did not fail with 401 Unauthorized",
+    );
+}
+
+#[tokio::test]
+async fn user_orders_list_successful() {
+    let app = spawn_app().await;
+
+    let (token, user) = app.get_jwt_token_and_user("test@test.test").await;
+
+    let plan = app
+        .repo
+        .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
+        .await
+        .unwrap();
+
+    let mut conn = app.db.acquire().await.unwrap();
+    let o1 = app
+        .repo
+        .create_order(
+            &mut conn,
+            CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Completed,
+            },
+        )
+        .await
+        .unwrap();
+    let o2 = app
+        .repo
+        .create_order(
+            &mut conn,
+            CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(2.99).unwrap(),
+                status: OrderStatus::Completed,
+            },
+        )
+        .await
+        .unwrap();
+    let o3 = app
+        .repo
+        .create_order(
+            &mut conn,
+            CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Failed,
+            },
+        )
+        .await
+        .unwrap();
+    let o4 = app
+        .repo
+        .create_order(
+            &mut conn,
+            CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Created,
+            },
+        )
+        .await
+        .unwrap();
+
+    let client = reqwest::Client::new();
+
+    //for page 0
+    let response = client
+        .get(format!("{}/api/v1/orders", app.address))
+        .bearer_auth(&token)
+        .query(&[("page", &0.to_string()), ("page_size", &2.to_string())])
+        .send()
+        .await
+        .expect("failed to call api");
+
+    assert_eq!(200, response.status().as_u16(), "the api call was not Ok",);
+
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiResponse<'_, Vec<Order>> = serde_json::from_slice(&bytes).unwrap();
+    let data = res.data.unwrap();
+    assert_eq!(data.len(), 2);
+    let order4 = data.first().unwrap();
+    assert_eq!(order4.id, o4.id);
+    assert_eq!(order4.plan_id, plan.id);
+    assert_eq!(order4.total, 1.99);
+    assert_eq!(order4.status, "CREATED".to_string());
+    assert_eq!(order4.created_at, o4.created_at.timestamp());
+
+    let order3 = data.get(1).unwrap();
+    assert_eq!(order3.id, o3.id);
+    assert_eq!(order3.plan_id, plan.id);
+    assert_eq!(order3.total, 1.99);
+    assert_eq!(order3.status, "FAILED".to_string());
+    assert_eq!(order3.created_at, o3.created_at.timestamp());
+
+    //for page 1
+    let response = client
+        .get(format!("{}/api/v1/orders", app.address))
+        .bearer_auth(&token)
+        .query(&[("page", &1.to_string()), ("page_size", &2.to_string())])
+        .send()
+        .await
+        .expect("failed to call api");
+
+    assert_eq!(200, response.status().as_u16(), "the api call was not Ok",);
+
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiResponse<'_, Vec<Order>> = serde_json::from_slice(&bytes).unwrap();
+    let data = res.data.unwrap();
+    assert_eq!(data.len(), 2);
+    let order2 = data.first().unwrap();
+    assert_eq!(order2.id, o2.id);
+    assert_eq!(order2.plan_id, plan.id);
+    assert_eq!(order2.total, 2.99);
+    assert_eq!(order2.status, "COMPLETED".to_string());
+    assert_eq!(order2.created_at, o2.created_at.timestamp());
+
+    let order1 = data.get(1).unwrap();
+    assert_eq!(order1.id, o1.id);
+    assert_eq!(order1.plan_id, plan.id);
+    assert_eq!(order1.total, 1.99);
+    assert_eq!(order1.status, "COMPLETED".to_string());
+    assert_eq!(order1.created_at, o1.created_at.timestamp());
+
+    //without sending any page and page_size
+    let response = client
+        .get(format!("{}/api/v1/orders", app.address))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .expect("failed to call api");
+
+    assert_eq!(200, response.status().as_u16(), "the api call was not Ok",);
+
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiResponse<'_, Vec<Order>> = serde_json::from_slice(&bytes).unwrap();
+    let data = res.data.unwrap();
+    assert_eq!(data.len(), 4);
+
+    //sending negative page and page_size
+    let response = client
+        .get(format!("{}/api/v1/orders", app.address))
+        .bearer_auth(&token)
+        .query(&[
+            ("page", &(-1).to_string()),
+            ("page_size", &(-2).to_string()),
+        ])
+        .send()
+        .await
+        .expect("failed to call api");
+
+    assert_eq!(200, response.status().as_u16(), "the api call was not Ok",);
+
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiResponse<'_, Vec<Order>> = serde_json::from_slice(&bytes).unwrap();
+    let data = res.data.unwrap();
+    assert_eq!(data.len(), 4);
 }

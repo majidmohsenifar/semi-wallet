@@ -7,7 +7,7 @@ use axum::{
 
 use crate::{
     repository::models::User,
-    service::order::service::{CreateOrderParams, OrderDetailParams},
+    service::order::service::{CreateOrderParams, GetUserOrdersListParams, OrderDetailParams},
     SharedState,
 };
 
@@ -96,7 +96,47 @@ pub async fn order_detail(
     let state = state.read().await;
     let res = state
         .order_service
-        .order_detail(user, OrderDetailParams { id: params.id })
+        .get_order_detail(user, OrderDetailParams { id: params.id })
+        .await;
+
+    match res {
+        Ok(res) => response::success(res, "").into_response(),
+        Err(err) => err.into_response(),
+    }
+}
+
+#[utoipa::path(
+        get,
+        path = "/api/v1/orders",
+        responses(
+            (status = OK, description = "", body = ApiResponseUserOrdersList),
+            (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server")
+        ),
+        params(
+            GetUserOrdersListParams,
+        ),
+        security(
+            ("api_jwt_token" = [])
+        )
+)]
+pub async fn user_orders_list(
+    State(state): State<SharedState>,
+    Extension(user): Extension<User>,
+    req: Request,
+) -> impl IntoResponse {
+    let params: Query<GetUserOrdersListParams> = match Query::try_from_uri(req.uri()) {
+        Ok(p) => p,
+        Err(_) => {
+            return response::error(StatusCode::BAD_REQUEST, "params are not correct")
+                .into_response();
+        }
+    };
+    //if  params.page.is_none() || params.page.unwar
+
+    let state = state.read().await;
+    let res = state
+        .order_service
+        .get_user_orders_list(user, params.0)
         .await;
 
     match res {

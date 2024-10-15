@@ -8,7 +8,7 @@ use super::response;
         get,
         path = "/api/v1/coins",
         responses(
-            (status = OK, description = "", body = ApiResponseCoinList),
+            (status = OK, description = "", body = ApiResponseCoinsList),
             (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server")
         )
 )]

@@ -3,11 +3,11 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use stripe::{EventObject, EventType};
 use tracing::error;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use validator::{Validate, ValidationError};
 
 use crate::repository::db::Repository;
-use crate::repository::models::{Order, OrderStatus, Payment, PaymentStatus, User};
+use crate::repository::models::{Order as OrderModel, OrderStatus, Payment, PaymentStatus, User};
 use crate::repository::order::CreateOrderArgs;
 use crate::service::payment::service::{CreatePaymentParams, Provider, Service as PaymentService};
 
@@ -77,6 +77,22 @@ pub struct OrderDetailResult {
     pub status: String,
     pub payment_url: String,
     pub payment_expire_date: i64,
+}
+
+#[derive(Serialize, Deserialize, Validate, ToSchema, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct GetUserOrdersListParams {
+    pub page: Option<i64>,
+    pub page_size: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct Order {
+    pub id: i64,
+    pub plan_id: i64,
+    pub total: f64,
+    pub status: String,
+    pub created_at: i64,
 }
 
 impl Service {
@@ -201,7 +217,7 @@ impl Service {
         })
     }
 
-    pub async fn order_detail(
+    pub async fn get_order_detail(
         &self,
         user: User,
         params: OrderDetailParams,
@@ -380,7 +396,7 @@ impl Service {
     async fn handle_successful_payment(
         &self,
         p: Payment,
-        o: Order,
+        o: OrderModel,
         metadata: &str,
     ) -> Result<(), OrderError> {
         let plan = self
@@ -461,7 +477,7 @@ impl Service {
     async fn handle_failed_payment(
         &self,
         p: Payment,
-        o: Order,
+        o: OrderModel,
         metadata: &str,
     ) -> Result<(), OrderError> {
         let mut db_tx = self.db.begin().await.map_err(|e| OrderError::Unexpected {
@@ -510,5 +526,51 @@ impl Service {
             });
         }
         Ok(())
+    }
+
+    pub async fn get_user_orders_list(
+        &self,
+        user: User,
+        params: GetUserOrdersListParams,
+    ) -> Result<Vec<Order>, OrderError> {
+        let mut page = params.page.unwrap_or(0);
+        if page < 0 {
+            page = 0;
+        }
+        let mut page_size = params.page_size.unwrap_or(0);
+        if !(1..100).contains(&page_size) {
+            page_size = 100;
+        }
+        let res = self
+            .repo
+            .get_orders_by_user_id(&self.db, user.id, page, page_size)
+            .await
+            .map_err(|e| OrderError::Unexpected {
+                message: "cannot get user orders".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            })?;
+
+        let mut orders = Vec::with_capacity(res.len());
+        for o in res {
+            let total = match o.total.to_f64() {
+                Some(float) => float,
+                None => {
+                    return Err(OrderError::InvalidTotal);
+                }
+            };
+            let status = serde_json::to_string(&o.status).map_err(|e| OrderError::Unexpected {
+                message: "cannot convert status".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            })?;
+            let status = status.replace('"', "");
+            orders.push(Order {
+                id: o.id,
+                plan_id: o.plan_id,
+                total,
+                status,
+                created_at: o.created_at.timestamp(),
+            });
+        }
+        Ok(orders)
     }
 }

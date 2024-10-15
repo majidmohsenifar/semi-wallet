@@ -1,8 +1,11 @@
 use bigdecimal::ToPrimitive;
+use serde::{Deserialize, Serialize};
 use sqlx::types::BigDecimal;
 use std::{collections::HashMap, fmt::Display};
+use utoipa::ToSchema;
 
 use sqlx::{Pool, Postgres};
+use std::sync::Arc;
 
 use crate::repository::{
     db::Repository,
@@ -38,7 +41,7 @@ pub struct MakePaymentResult {
     pub expires_at: chrono::DateTime<chrono::Utc>,
 }
 
-pub struct HandlerCheckPaymentResult {
+pub struct CheckPaymentHandlerResult {
     pub status: PaymentStatus,
     pub amount: f64,
     pub metadata: String,
@@ -72,6 +75,12 @@ pub enum Provider {
     Bitpay,
 }
 
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct PaymentProvider {
+    pub code: String,
+    pub enabled: bool,
+}
+
 impl Display for Provider {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -95,12 +104,11 @@ impl Provider {
     }
 }
 
-//#[derive(Clone)]
+#[derive(Clone)]
 pub struct Service {
     db: Pool<Postgres>,
     repo: Repository,
-    providers: HashMap<Provider, PaymentHandler>,
-    //providers: Arc<HashMap<Provider, PaymentHandler>>,
+    providers: Arc<HashMap<Provider, PaymentHandler>>,
 }
 
 enum PaymentHandler {
@@ -123,7 +131,7 @@ impl Service {
         Service {
             db,
             repo,
-            providers,
+            providers: Arc::new(providers),
         }
     }
 
@@ -256,5 +264,18 @@ impl Service {
         self.repo
             .get_last_payment_by_order_id(&self.db, order_id)
             .await
+    }
+
+    pub async fn get_payment_providers(&self) -> Vec<PaymentProvider> {
+        vec![
+            PaymentProvider {
+                code: PAYMENT_PROVIDER_STRIPE.to_string(),
+                enabled: true,
+            },
+            PaymentProvider {
+                code: PAYMENT_PROVIDER_BITPAY.to_string(),
+                enabled: true,
+            },
+        ]
     }
 }

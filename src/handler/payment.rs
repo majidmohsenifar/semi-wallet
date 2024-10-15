@@ -53,3 +53,17 @@ pub async fn handle_stripe_webhook(
         Err(err) => err.into_response(),
     }
 }
+
+#[utoipa::path(
+        get,
+        path = "/api/v1/payment/providers",
+        responses(
+            (status = OK, description = "", body = ApiResponsePaymentProvidersList),
+            (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server")
+        )
+)]
+pub async fn payment_providers(State(state): State<SharedState>) -> impl IntoResponse {
+    let state = state.read().await;
+    let res = state.payment_service.get_payment_providers().await;
+    response::success(res, "").into_response()
+}

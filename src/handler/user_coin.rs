@@ -18,7 +18,7 @@ use super::response;
         get,
         path = "/api/v1/user-coins",
         responses(
-            (status = OK, description = "", body = ApiResponseUserCoinList),
+            (status = OK, description = "", body = ApiResponseUserCoinsList),
             (status = INTERNAL_SERVER_ERROR, description = "something went wrong in server")
         ),
         security(

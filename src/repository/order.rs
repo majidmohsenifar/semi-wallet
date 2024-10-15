@@ -1,5 +1,5 @@
-use sqlx::types::BigDecimal;
 use sqlx::PgConnection;
+use sqlx::{types::BigDecimal, Pool, Postgres};
 
 use super::{
     db::Repository,
@@ -68,5 +68,23 @@ impl Repository {
         .execute(&mut *conn)
         .await?;
         Ok(())
+    }
+
+    pub async fn get_orders_by_user_id(
+        &self,
+        db: &Pool<Postgres>,
+        user_id: i64,
+        page: i64,
+        page_size: i64,
+    ) -> Result<Vec<Order>, sqlx::Error> {
+        let res = sqlx::query_as::<_, Order>(
+            "SELECT * from orders where user_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3",
+        )
+        .bind(user_id)
+        .bind(page_size)
+        .bind(page * page_size)
+        .fetch_all(db)
+        .await?;
+        Ok(res)
     }
 }

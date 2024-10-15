@@ -8,7 +8,9 @@ use crate::service::auth::service::RegisterResult;
 use crate::service::coin::service::Coin;
 use crate::service::plan::service::Plan;
 use crate::service::order::service::CreateOrderResult;
+use crate::service::order::service::Order;
 use crate::service::order::service::OrderDetailResult;
+use crate::service::payment::service::PaymentProvider;
 
 
 #[derive(Serialize,ToSchema)]
@@ -17,13 +19,15 @@ pub struct Empty;
 #[derive(Serialize, Deserialize, ToSchema)]
 #[aliases(
     ApiResponseCreateUserCoin = ApiResponse<'a,UserCoin>, 
-    ApiResponseUserCoinList = ApiResponse<'a,Vec<UserCoin>>,
+    ApiResponseUserCoinsList = ApiResponse<'a,Vec<UserCoin>>,
     ApiResponseLogin = ApiResponse<'a,LoginResult>,
     ApiResponseRegister = ApiResponse<'a,RegisterResult>,
-    ApiResponseCoinList = ApiResponse<'a,Vec<Coin>>,
-    ApiResponsePlanList = ApiResponse<'a,Vec<Plan>>,
+    ApiResponseCoinsList = ApiResponse<'a,Vec<Coin>>,
+    ApiResponsePlansList = ApiResponse<'a,Vec<Plan>>,
     ApiResponseCreateOrder = ApiResponse<'a,CreateOrderResult>,
     ApiResponseOrderDetail = ApiResponse<'a,OrderDetailResult>,
+    ApiResponseUserOrdersList = ApiResponse<'a,Vec<Order>>,
+    ApiResponsePaymentProvidersList = ApiResponse<'a,Vec<PaymentProvider>>,
     ApiResponseEmpty = ApiResponse<'a,Empty>,
 )]
 pub struct ApiResponse<'a, T: Serialize> {
