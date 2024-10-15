@@ -1,4 +1,5 @@
 use config::Config;
+use dotenv;
 
 #[derive(serde::Deserialize, Clone, Debug)]
 pub struct Settings {
@@ -37,6 +38,9 @@ pub struct JwtConfig {
 
 //TODO: why not associative func?
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
+    #[cfg(debug_assertions)]
+    dotenv::dotenv().ok();
+
     let cfg = Config::builder()
         //.add_source(config::File::with_name(".env"))
         .add_source(config::Environment::default().separator("_"))
