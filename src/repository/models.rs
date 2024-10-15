@@ -94,6 +94,8 @@ pub struct UserCoin {
     pub address: String,
     pub symbol: String,
     pub network: String,
+    pub amount: Option<BigDecimal>,
+    pub amount_updated_at: Option<chrono::DateTime<chrono::Utc>>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
