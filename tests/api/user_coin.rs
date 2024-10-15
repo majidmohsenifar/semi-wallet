@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::convert::From;
 
-use claim::assert_gt;
+use bigdecimal::{BigDecimal, FromPrimitive};
+use claim::{assert_gt, assert_none};
 use semi_wallet::{
     handler::response::{ApiError, ApiResponse},
     repository::user_coin::CreateUserCoinArgs,
@@ -34,7 +35,8 @@ async fn get_user_coins_successful() {
 
     app.insert_coins().await;
 
-    app.repo
+    let uc1 = app
+        .repo
         .create_user_coin(
             &app.db,
             CreateUserCoinArgs {
@@ -49,6 +51,12 @@ async fn get_user_coins_successful() {
         .unwrap();
 
     app.repo
+        .update_user_coin_amount(&app.db, uc1, BigDecimal::from_f64(2.18).unwrap())
+        .await
+        .unwrap();
+
+    let uc2 = app
+        .repo
         .create_user_coin(
             &app.db,
             CreateUserCoinArgs {
@@ -59,6 +67,11 @@ async fn get_user_coins_successful() {
                 address: "eth_addr".to_string(),
             },
         )
+        .await
+        .unwrap();
+
+    app.repo
+        .update_user_coin_amount(&app.db, uc2, BigDecimal::from_f64(0.0002).unwrap())
         .await
         .unwrap();
 
@@ -115,7 +128,8 @@ async fn get_user_coins_successful() {
     assert_gt!(uc1.coin_id, 0);
     assert_eq!(uc1.address, "btc_addr".to_string());
     assert_eq!(uc1.symbol, "BTC".to_string());
-    assert_eq!(uc1.network, "BTC".to_string());
+    assert_eq!(uc1.amount.unwrap(), 2.18);
+    assert_gt!(uc1.amount_updated_at.unwrap(), 0);
 
     let uc2 = data.get(1).unwrap();
     assert_gt!(uc2.id, 0);
@@ -123,6 +137,8 @@ async fn get_user_coins_successful() {
     assert_eq!(uc2.address, "eth_addr".to_string());
     assert_eq!(uc2.symbol, "ETH".to_string());
     assert_eq!(uc2.network, "ETH".to_string());
+    assert_eq!(uc2.amount.unwrap(), 0.0002);
+    assert_gt!(uc2.amount_updated_at.unwrap(), 0);
 
     let uc3 = data.get(2).unwrap();
     assert_gt!(uc3.id, 0);
@@ -130,6 +146,8 @@ async fn get_user_coins_successful() {
     assert_eq!(uc3.address, "usdt_eth_addr".to_string());
     assert_eq!(uc3.symbol, "USDT".to_string());
     assert_eq!(uc3.network, "ETH".to_string());
+    assert_none!(uc3.amount);
+    assert_none!(uc3.amount_updated_at);
 
     let uc4 = data.last().unwrap();
     assert_gt!(uc4.id, 0);
@@ -137,6 +155,8 @@ async fn get_user_coins_successful() {
     assert_eq!(uc4.address, "usdt_trx_addr".to_string());
     assert_eq!(uc4.symbol, "USDT".to_string());
     assert_eq!(uc4.network, "TRX".to_string());
+    assert_none!(uc4.amount);
+    assert_none!(uc4.amount_updated_at);
 }
 
 #[tokio::test]

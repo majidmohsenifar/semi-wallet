@@ -1,3 +1,4 @@
+use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use utoipa::ToSchema;
@@ -22,8 +23,9 @@ pub struct UserCoin {
     pub address: String,
     pub symbol: String,
     pub network: String,
+    pub amount: Option<f64>,
+    pub amount_updated_at: Option<i64>,
     pub created_at: i64,
-    pub updated_at: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
@@ -53,17 +55,27 @@ impl Service {
                 message: "cannot get user coins from db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             })?;
-        //let mut user_coins = Vec::with_capacity(res.len());
         let user_coins = res
             .into_iter()
-            .map(|uc| UserCoin {
-                id: uc.id,
-                coin_id: uc.coin_id,
-                address: uc.address,
-                symbol: uc.symbol,
-                network: uc.network,
-                created_at: uc.created_at.timestamp(),
-                updated_at: uc.updated_at.timestamp(),
+            .map(|uc| {
+                let mut amount = None;
+                if let Some(bd) = uc.amount {
+                    amount = bd.to_f64();
+                }
+                let mut amount_updated_at = None;
+                if let Some(updated_at) = uc.amount_updated_at {
+                    amount_updated_at = Some(updated_at.timestamp());
+                }
+                UserCoin {
+                    id: uc.id,
+                    coin_id: uc.coin_id,
+                    address: uc.address,
+                    symbol: uc.symbol,
+                    network: uc.network,
+                    amount,
+                    amount_updated_at,
+                    created_at: uc.created_at.timestamp(),
+                }
             })
             .collect();
 
@@ -118,8 +130,9 @@ impl Service {
             address: params.address,
             symbol: coin.symbol,
             network: coin.network,
+            amount: None,
+            amount_updated_at: None,
             created_at: chrono::Utc::now().timestamp(),
-            updated_at: chrono::Utc::now().timestamp(),
         })
     }
 

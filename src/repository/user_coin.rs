@@ -1,3 +1,4 @@
+use sqlx::types::BigDecimal;
 use sqlx::{Pool, Postgres};
 
 use super::{db::Repository, models::UserCoin};
@@ -85,6 +86,26 @@ impl Repository {
         .bind(id)
         .bind(user_id)
         .bind(address)
+        .execute(db)
+        .await?;
+        Ok(res.rows_affected())
+    }
+
+    pub async fn update_user_coin_amount(
+        &self,
+        db: &Pool<Postgres>,
+        id: i64,
+        amount: BigDecimal,
+    ) -> Result<u64, sqlx::Error> {
+        let res = sqlx::query(
+            "
+            UPDATE users_coins 
+            SET amount = $2, 
+            amount_updated_at = NOW()
+            WHERE id = $1",
+        )
+        .bind(id)
+        .bind(amount)
         .execute(db)
         .await?;
         Ok(res.rows_affected())

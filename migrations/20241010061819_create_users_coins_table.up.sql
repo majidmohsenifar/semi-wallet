@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users_coins (
     address VARCHAR(64) NOT NULL,
     symbol VARCHAR(8) NOT NULL,
     network VARCHAR(8) NOT NULL,
-    amount NUMERIC(5, 2) NULL,
+    amount NUMERIC NULL,
     amount_updated_at TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
