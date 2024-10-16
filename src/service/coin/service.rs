@@ -1,6 +1,5 @@
 use sqlx::{Pool, Postgres};
 
-use tracing::error;
 use utoipa::ToSchema;
 
 use crate::repository::{db::Repository, models::Coin as CoinModel};

@@ -219,11 +219,11 @@ impl Service {
             Ok(payment) => payment,
             Err(e) => match e {
                 sqlx::Error::RowNotFound => return Err(PaymentError::NotFound { id }),
-                other => {
+                e => {
                     tracing::error!("cannot get_payment_by_id due to err: {}", e);
                     return Err(PaymentError::Unexpected {
                         message: "cannot get payment by id from db".to_string(),
-                        source: Box::new(other) as Box<dyn std::error::Error + Send + Sync>,
+                        source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                     });
                 }
             },

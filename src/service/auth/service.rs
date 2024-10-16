@@ -1,4 +1,3 @@
-use jsonwebtoken::errors::ErrorKind;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use utoipa::ToSchema;
