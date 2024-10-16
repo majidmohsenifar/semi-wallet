@@ -2,7 +2,6 @@ use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use stripe::{EventObject, EventType};
-use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 use validator::{Validate, ValidationError};
 
@@ -132,6 +131,7 @@ impl Service {
                     });
                 }
                 _ => {
+                    tracing::error!("cannot get plan by code due to err: {}", e);
                     return Err(OrderError::Unexpected {
                         message: "cannot get plan".to_string(),
                         source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -143,6 +143,7 @@ impl Service {
 
         let db_tx = self.db.begin().await;
         if let Err(e) = db_tx {
+            tracing::error!("cannot begin db tx due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot start transaction".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -164,6 +165,7 @@ impl Service {
             .await;
         if let Err(e) = order {
             let _ = db_tx.rollback().await;
+            tracing::error!("cannot create order due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot create order".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -186,6 +188,7 @@ impl Service {
 
         if let Err(e) = payment {
             let _ = db_tx.rollback().await;
+            tracing::error!("cannot create payment due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot create payment".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -197,16 +200,19 @@ impl Service {
         if let Err(e) = commit_res {
             //TODO: shouldn't we rollback? but how, the commit causes move of db_tx
             //let _ = db_tx.rollback().await;
+            tracing::error!("cannot commit db tx due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot commit changes to db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             });
         }
-        let status =
-            serde_json::to_string(&OrderStatus::Created).map_err(|e| OrderError::Unexpected {
+        let status = serde_json::to_string(&OrderStatus::Created).map_err(|e| {
+            tracing::error!("cannot convert order status to string due to err: {}", e);
+            OrderError::Unexpected {
                 message: "cannot convert status".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            })?;
+            }
+        })?;
 
         let status = status.replace('"', "");
 
@@ -224,7 +230,7 @@ impl Service {
     ) -> Result<OrderDetailResult, OrderError> {
         let conn = self.db.acquire().await;
         if let Err(e) = conn {
-            error!("cannot acquire db conn due to err {e}");
+            tracing::error!(" cannot acquire db conn due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot get order from db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -236,6 +242,7 @@ impl Service {
             match e {
                 sqlx::Error::RowNotFound => return Err(OrderError::NotFound { id: params.id }),
                 _ => {
+                    tracing::error!(" cannot get_order_by_id due to err: {}", e);
                     return Err(OrderError::Unexpected {
                         message: "cannot get order from db".to_string(),
                         source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -251,23 +258,32 @@ impl Service {
             .plan_service
             .get_plan_by_id(order.plan_id)
             .await
-            .map_err(|e| OrderError::Unexpected {
-                message: "cannot get plan from db".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            .map_err(|e| {
+                tracing::error!(" cannot get_plan_by_id due to err: {}", e);
+                OrderError::Unexpected {
+                    message: "cannot get plan from db".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
             })?;
 
         let payment = self
             .payment_service
             .get_last_payment_by_order_id(order.id)
             .await
-            .map_err(|e| OrderError::Unexpected {
-                message: "cannot get payment from db".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            .map_err(|e| {
+                tracing::error!(" cannot get_last_payment_by_order_id due to err: {}", e);
+                OrderError::Unexpected {
+                    message: "cannot get payment from db".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
             })?;
 
-        let status = serde_json::to_string(&order.status).map_err(|e| OrderError::Unexpected {
-            message: "cannot convert status".to_string(),
-            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        let status = serde_json::to_string(&order.status).map_err(|e| {
+            tracing::error!(" cannot convert orderStatus to string due to err: {}", e);
+            OrderError::Unexpected {
+                message: "cannot convert status".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            }
         })?;
         let status = status.replace('"', "");
 
@@ -310,6 +326,7 @@ impl Service {
         );
         let event = match event {
             Err(e) => {
+                tracing::error!("cannot construct_event for stripe webhook due to err: {e}");
                 return Err(OrderError::Unexpected {
                     message: "cannot construct stripe webhook event".to_string(),
                     source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -356,9 +373,12 @@ impl Service {
             .payment_service
             .check_payment(payment_id)
             .await
-            .map_err(|e| OrderError::Unexpected {
-                message: "cannot check payment ".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            .map_err(|e| {
+                tracing::error!("cannot check payment due to err: {}", e);
+                OrderError::Unexpected {
+                    message: "cannot check payment ".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
             })?;
 
         if check_payment.status == PaymentStatus::Created {
@@ -367,7 +387,7 @@ impl Service {
 
         let conn = self.db.acquire().await;
         if let Err(e) = conn {
-            error!("cannot acquire db conn due to err {e}");
+            tracing::error!("cannot acquire db conn due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot get order from db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -403,19 +423,28 @@ impl Service {
             .plan_service
             .get_plan_by_id(o.plan_id)
             .await
-            .map_err(|e| OrderError::Unexpected {
-                message: "cannot get plan".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            .map_err(|e| {
+                tracing::error!("cannot get_plan_by_id due to err: {}", e);
+                OrderError::Unexpected {
+                    message: "cannot get plan".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
             })?;
 
-        let mut db_tx = self.db.begin().await.map_err(|e| OrderError::Unexpected {
-            message: "cannot start db transaction".to_string(),
-            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        let mut db_tx = self.db.begin().await.map_err(|e| {
+            tracing::error!("cannot begin db tx due to err: {}", e);
+            OrderError::Unexpected {
+                message: "cannot start db transaction".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            }
         })?;
 
-        let metadata = serde_json::to_value(metadata).map_err(|e| OrderError::Unexpected {
-            message: "cannot convert metadata to json".to_string(),
-            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        let metadata = serde_json::to_value(metadata).map_err(|e| {
+            tracing::error!("cannot convert meta_data to json due to err: {}", e);
+            OrderError::Unexpected {
+                message: "cannot convert metadata to json".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            }
         })?;
 
         let update_payment_res = self
@@ -430,6 +459,7 @@ impl Service {
 
         if let Err(e) = update_payment_res {
             let _ = db_tx.rollback().await;
+            tracing::error!("cannot update_payment_status_metadata due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot update payment status".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -443,6 +473,7 @@ impl Service {
 
         if let Err(e) = update_order_res {
             let _ = db_tx.rollback().await;
+            tracing::error!("cannot update_order_status due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot update order status".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -456,6 +487,7 @@ impl Service {
 
         if let Err(e) = create_user_plan_res {
             let _ = db_tx.rollback().await;
+            tracing::error!("cannot create_user_plan_or_update_expires_at due to err: {e}");
             return Err(OrderError::Unexpected {
                 message: "cannot create or update user_plan".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -466,6 +498,7 @@ impl Service {
         if let Err(e) = commit_res {
             //TODO: shouldn't we rollback? but how, the commit causes move of db_tx
             //let _ = db_tx.rollback().await;
+            tracing::error!("cannot commit db tx due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot commit changes to db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -480,14 +513,20 @@ impl Service {
         o: OrderModel,
         metadata: &str,
     ) -> Result<(), OrderError> {
-        let mut db_tx = self.db.begin().await.map_err(|e| OrderError::Unexpected {
-            message: "cannot start db transaction".to_string(),
-            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        let mut db_tx = self.db.begin().await.map_err(|e| {
+            tracing::error!("cannot begin db tx due to err: {}", e);
+            OrderError::Unexpected {
+                message: "cannot start db transaction".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            }
         })?;
 
-        let metadata = serde_json::to_value(metadata).map_err(|e| OrderError::Unexpected {
-            message: "cannot convert metadata to json".to_string(),
-            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        let metadata = serde_json::to_value(metadata).map_err(|e| {
+            tracing::error!("cannot convert metadata to json due to err: {}", e);
+            OrderError::Unexpected {
+                message: "cannot convert metadata to json".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            }
         })?;
 
         let update_payment_res = self
@@ -497,6 +536,7 @@ impl Service {
 
         if let Err(e) = update_payment_res {
             let _ = db_tx.rollback().await;
+            tracing::error!("cannot update_payment_status_metadata due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot update payment status".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -510,6 +550,7 @@ impl Service {
 
         if let Err(e) = update_order_res {
             let _ = db_tx.rollback().await;
+            tracing::error!("cannot update_order_status due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot update order status".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -520,6 +561,7 @@ impl Service {
         if let Err(e) = commit_res {
             //TODO: shouldn't we rollback? but how, the commit causes move of db_tx
             //let _ = db_tx.rollback().await;
+            tracing::error!("cannot commit db tx due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot commit changes to db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -545,9 +587,12 @@ impl Service {
             .repo
             .get_orders_by_user_id(&self.db, user.id, page, page_size)
             .await
-            .map_err(|e| OrderError::Unexpected {
-                message: "cannot get user orders".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            .map_err(|e| {
+                tracing::error!("cannot get_orders_by_user_id due to err: {}", e);
+                OrderError::Unexpected {
+                    message: "cannot get user orders".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
             })?;
 
         let mut orders = Vec::with_capacity(res.len());
@@ -558,9 +603,12 @@ impl Service {
                     return Err(OrderError::InvalidTotal);
                 }
             };
-            let status = serde_json::to_string(&o.status).map_err(|e| OrderError::Unexpected {
-                message: "cannot convert status".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            let status = serde_json::to_string(&o.status).map_err(|e| {
+                tracing::error!("cannot convert orderStatus to string due to err: {}", e);
+                OrderError::Unexpected {
+                    message: "cannot convert status".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
             })?;
             let status = status.replace('"', "");
             orders.push(Order {

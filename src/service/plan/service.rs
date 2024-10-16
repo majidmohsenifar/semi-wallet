@@ -42,6 +42,7 @@ impl Service {
     pub async fn get_plans_list(&self) -> Result<Vec<Plan>, PlanError> {
         let res = self.repo.get_all_plans(&self.db).await;
         if let Err(e) = res {
+            tracing::error!("cannot get_all_plans due to err: {}", e);
             return Err(PlanError::Unexpected {
                 message: "cannot get plans from db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,

@@ -47,6 +47,7 @@ impl Service {
             .await;
 
         if let Err(e) = user {
+            tracing::error!("cannot create_user due to err: {}", e);
             return Err(UserError::Unexpected {
                 message: "cannot create user".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,

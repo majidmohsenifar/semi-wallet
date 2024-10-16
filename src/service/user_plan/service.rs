@@ -38,6 +38,7 @@ impl Service {
             .await;
 
         if let Err(e) = res {
+            tracing::error!("cannot create_user_plan_or_update_expires_at due to err: {e}");
             return Err(UserPlanError::Unexpected {
                 message: "cannot create or update user_plan".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,

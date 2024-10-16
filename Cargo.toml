@@ -12,9 +12,17 @@ path = "src/lib.rs"
 # Notice the double square brackets: it's an array in TOML's syntax.
 # We can only have one library in a project, but we can have multiple binaries!
 [[bin]]
-path = "src/main.rs"
-name = "semi-wallet"
+path = "src/bin/http_server.rs"
+name = "server"
 
+
+[[bin]]
+path = "src/bin/cli.rs"
+name = "cli"
+
+[[bin]]
+path = "src/bin/ws_client.rs"
+name = "ws"
 
 
 [dependencies]
@@ -41,6 +49,9 @@ bigdecimal = { version = "0.4.5", features = ["serde"] }
 utoipa = { version = "4.2.3", features= ["axum_extras"] }
 utoipa-swagger-ui = { version = "7.1.0", features = ["axum"] }
 dotenv = "0.15.0"
+tracing-bunyan-formatter = "0.3.9"
+tracing-log = "0.2.0"
+tower-http = { version = "0.6.1", features = ["trace"] }
 
 
 [dev-dependencies]

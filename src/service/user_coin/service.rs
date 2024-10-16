@@ -51,9 +51,12 @@ impl Service {
             .repo
             .get_user_coins_by_user_id(&self.db, user.id)
             .await
-            .map_err(|e| UserCoinError::Unexpected {
-                message: "cannot get user coins from db".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            .map_err(|e| {
+                tracing::error!("cannot get_user_coins_by_user_id due to err: {}", e);
+                UserCoinError::Unexpected {
+                    message: "cannot get user coins from db".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
             })?;
         let user_coins = res
             .into_iter()
@@ -100,10 +103,13 @@ impl Service {
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => UserCoinError::CoinOrNetworkNotFound,
-                other => UserCoinError::Unexpected {
-                    message: "cannot get coin by symbol or network".to_string(),
-                    source: Box::new(other) as Box<dyn std::error::Error + Send + Sync>,
-                },
+                e => {
+                    tracing::error!("cannot get_coin_by_symbol_network due to err: {}", e);
+                    UserCoinError::Unexpected {
+                        message: "cannot get coin by symbol or network".to_string(),
+                        source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                    }
+                }
             })?;
 
         let id = self
@@ -119,9 +125,12 @@ impl Service {
                 },
             )
             .await
-            .map_err(|e| UserCoinError::Unexpected {
-                message: "cannot create user coin".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            .map_err(|e| {
+                tracing::error!("cannot create_user_coin due to err: {}", e);
+                UserCoinError::Unexpected {
+                    message: "cannot create user coin".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
             })?;
 
         Ok(UserCoin {
@@ -145,9 +154,12 @@ impl Service {
             .repo
             .delete_user_coin(&self.db, user.id, user_coin_id)
             .await
-            .map_err(|e| UserCoinError::Unexpected {
-                message: "cannot delete user coin".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            .map_err(|e| {
+                tracing::error!("cannot delete_user_coin due to err: {}", e);
+                UserCoinError::Unexpected {
+                    message: "cannot delete user coin".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
             })?;
         if rows_affected == 0 {
             return Err(UserCoinError::UserCoinNotFound);
@@ -166,9 +178,12 @@ impl Service {
             .repo
             .update_user_coin_address(&self.db, user.id, user_coin_id, address)
             .await
-            .map_err(|e| UserCoinError::Unexpected {
-                message: "cannot delete user coin".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            .map_err(|e| {
+                tracing::error!("cannot update_user_coin_address due to err: {}", e);
+                UserCoinError::Unexpected {
+                    message: "cannot delete user coin".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
             })?;
         if rows_affected == 0 {
             return Err(UserCoinError::UserCoinNotFound);

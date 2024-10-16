@@ -155,6 +155,7 @@ impl Service {
             .await;
 
         if let Err(e) = payment {
+            tracing::error!("cannot create_payment due to err: {}", e);
             return Err(PaymentError::Unexpected {
                 message: "cannot create payment".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -179,6 +180,7 @@ impl Service {
         };
 
         if let Err(e) = make_payment_result {
+            tracing::error!("cannot make_payment due to err: {}", e);
             return Err(PaymentError::Unexpected {
                 message: "cannot make payment".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -197,6 +199,7 @@ impl Service {
             )
             .await;
         if let Err(e) = update_payment_result {
+            tracing::error!("cannot update_payment_result due to err: {}", e);
             return Err(PaymentError::Unexpected {
                 message: "cannot make payment".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -217,10 +220,11 @@ impl Service {
             Err(e) => match e {
                 sqlx::Error::RowNotFound => return Err(PaymentError::NotFound { id }),
                 other => {
+                    tracing::error!("cannot get_payment_by_id due to err: {}", e);
                     return Err(PaymentError::Unexpected {
                         message: "cannot get payment by id from db".to_string(),
                         source: Box::new(other) as Box<dyn std::error::Error + Send + Sync>,
-                    })
+                    });
                 }
             },
         };

@@ -1,3 +1,4 @@
+use jsonwebtoken::errors::ErrorKind;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use utoipa::ToSchema;
@@ -54,6 +55,7 @@ impl Service {
         match existing_user {
             Err(sqlx::Error::RowNotFound) => {}
             Err(e) => {
+                tracing::error!("cannot get_user_by_email due to err: {}", e);
                 return Err(AuthError::Unexpected {
                     message: "cannot check if email already exist".to_string(),
                     source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -65,6 +67,7 @@ impl Service {
         }
         let encrypted_password = match bcrypt::encrypt_password(&params.password) {
             Err(e) => {
+                tracing::error!("cannot encrypt password due to err: {}", e);
                 return Err(AuthError::Unexpected {
                     message: "cannot encrypt password".to_string(),
                     source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -75,6 +78,7 @@ impl Service {
 
         let conn = self.db.acquire().await;
         if let Err(e) = conn {
+            tracing::error!("cannot acquire db conn due to err: {}", e);
             return Err(AuthError::Unexpected {
                 message: "cannot acquire db conn ".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -92,6 +96,7 @@ impl Service {
             )
             .await;
         if let Err(e) = u {
+            tracing::error!("cannot create_user due to err: {}", e);
             return Err(AuthError::Unexpected {
                 message: "cannot insert to db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -105,6 +110,7 @@ impl Service {
         let user = match user {
             Err(sqlx::Error::RowNotFound) => return Err(AuthError::InvalidCredentials),
             Err(e) => {
+                tracing::error!("cannot get user by email due to err: {}", e);
                 return Err(AuthError::Unexpected {
                     message: "something went wrong".to_string(),
                     source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -116,6 +122,7 @@ impl Service {
         let verify = bcrypt::verify_password(&params.password, &user.password);
         let is_verified = match verify {
             Err(e) => {
+                tracing::error!("cannot verify_password due to err: {}", e);
                 return Err(AuthError::Unexpected {
                     message: "cannot verify the password".to_string(),
                     source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -130,6 +137,7 @@ impl Service {
         let token = jwt::create_jwt(self.jwt_secret.as_bytes(), params.email);
         let token = match token {
             Err(e) => {
+                tracing::error!("cannot create_jwt due to err: {}", e);
                 return Err(AuthError::Unexpected {
                     message: "cannot generate token".to_string(),
                     source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
@@ -153,6 +161,7 @@ impl Service {
         let user = match user {
             Err(sqlx::Error::RowNotFound) => return Err(AuthError::InvalidToken),
             Err(e) => {
+                tracing::error!("cannot get_user_by_email due to err: {}", e);
                 return Err(AuthError::Unexpected {
                     message: "something went wrong".to_string(),
                     source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,

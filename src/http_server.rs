@@ -3,7 +3,7 @@ use crate::{config::Settings, handler, middleware, AppState, SharedState};
 use axum::{
     middleware as axum_middleware,
     routing::{delete, get, patch, post},
-    Router,
+    Router, 
 };
 use std::sync::Arc;
 use tokio::{io, net::TcpListener, sync::RwLock};
@@ -206,13 +206,11 @@ pub async fn get_router(shared_state: SharedState) -> Router {
 
     Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
-        //.merge(Redoc::with_url("/redoc", ApiDoc::openapi()))
-        // There is no need to create `RapiDoc::with_openapi` because the OpenApi is served
-        // via SwaggerUi instead we only make rapidoc to point to the existing doc.
-        //.merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
-        // Alternative to above
-        // .merge(RapiDoc::with_openapi("/api-docs/openapi2.json", ApiDoc::openapi()).path("/rapidoc"))
-        //.merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
         .nest("/api/v1", api_routes)
+        //.layer(TraceLayer::new_for_http()
+            ////.make_span_with(new_make_span)
+            //.on_failure(|error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
+            //tracing::error!("error: {}", error)
+        //}))
         .with_state(shared_state)
 }

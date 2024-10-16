@@ -33,7 +33,7 @@ impl Service {
     pub async fn coins_list(&self) -> Result<Vec<Coin>, CoinError> {
         let res = self.repo.get_all_coins(&self.db).await;
         if let Err(e) = res {
-            error!("cannot acquire db conn due to err {e}");
+            tracing::error!("cannot get_all_coins due to err: {}", e);
             return Err(CoinError::Unexpected {
                 message: "cannot get coins from db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
