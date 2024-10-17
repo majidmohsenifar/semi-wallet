@@ -4,9 +4,11 @@ use axum::{
     middleware as axum_middleware,
     routing::{delete, get, patch, post},
     Router, 
+    http::Method,
 };
 use std::sync::Arc;
 use tokio::{io, net::TcpListener, sync::RwLock};
+use tower_http::cors::{CorsLayer,Any};
 
 use crate::client::postgres;
 use crate::repository::db::Repository;
@@ -212,5 +214,10 @@ pub async fn get_router(shared_state: SharedState) -> Router {
             //.on_failure(|error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
             //tracing::error!("error: {}", error)
         //}))
+        .layer(CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods([Method::GET,Method::POST,Method::PATCH,Method::PUT])
+                .allow_headers(Any),//TODO: should we let Any header to be passed?
+        )
         .with_state(shared_state)
 }
