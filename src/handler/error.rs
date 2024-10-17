@@ -83,6 +83,8 @@ impl IntoResponse for UserCoinError {
         let status_code = match self {
             Self::CoinOrNetworkNotFound { .. } => StatusCode::NOT_FOUND,
             Self::UserCoinNotFound { .. } => StatusCode::NOT_FOUND,
+            Self::UserPlanNotFound { .. } => StatusCode::NOT_FOUND,
+            Self::UserPlanExpired { .. } => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (

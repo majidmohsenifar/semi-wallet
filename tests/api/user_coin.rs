@@ -5,8 +5,11 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use claim::{assert_gt, assert_none};
 use semi_wallet::{
     handler::response::{ApiError, ApiResponse},
-    repository::user_coin::CreateUserCoinArgs,
-    service::user_coin::service::UserCoin,
+    repository::{
+        models::OrderStatus, user_coin::CreateUserCoinArgs,
+        user_plan::CreateUserPlanOrUpdateExpiresAtArgs,
+    },
+    service::{plan::service::PLAN_CODE_1_MONTH, user_coin::service::UserCoin},
 };
 
 use crate::helpers::spawn_app;
@@ -237,7 +240,7 @@ async fn create_user_coin_coin_not_found() {
     assert_eq!(
         404,
         response.status().as_u16(),
-        "the api did not fail with 401 Unauthorized",
+        "the api did not fail with 404 Not Found",
     );
     let bytes = response.bytes().await.unwrap();
     let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
@@ -245,11 +248,139 @@ async fn create_user_coin_coin_not_found() {
 }
 
 #[tokio::test]
-async fn create_user_coin_successful() {
+async fn create_user_coin_user_plan_not_found() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
     app.insert_coins().await;
+    let body = HashMap::from([
+        ("address", "btc_addr"),
+        ("symbol", "BTC"),
+        ("network", "BTC"),
+    ]);
+    let response = client
+        .post(&format!("{}/api/v1/user-coins/create", app.address))
+        .bearer_auth(&token)
+        .json(&body)
+        .send()
+        .await
+        .expect("failed to call the api");
+    assert_eq!(
+        404,
+        response.status().as_u16(),
+        "the api did not fail with 404 Not Found",
+    );
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(res.message, "user does not have any plan");
+}
+
+#[tokio::test]
+async fn create_user_coin_expired_user_plan() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
+    app.insert_coins().await;
+
+    let plan = app
+        .repo
+        .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
+        .await
+        .unwrap();
+
+    let mut conn = app.db.acquire().await.unwrap();
+
+    let order = app
+        .repo
+        .create_order(
+            &mut conn,
+            semi_wallet::repository::order::CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Completed,
+            },
+        )
+        .await
+        .unwrap();
+
+    app.repo
+        .create_user_plan_or_update_expires_at(
+            &mut conn,
+            CreateUserPlanOrUpdateExpiresAtArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                order_id: order.id,
+                days: -32,
+            },
+        )
+        .await
+        .unwrap();
+
+    let body = HashMap::from([
+        ("address", "btc_addr"),
+        ("symbol", "BTC"),
+        ("network", "BTC"),
+    ]);
+    let response = client
+        .post(&format!("{}/api/v1/user-coins/create", app.address))
+        .bearer_auth(&token)
+        .json(&body)
+        .send()
+        .await
+        .expect("failed to call the api");
+    assert_eq!(
+        422,
+        response.status().as_u16(),
+        "the api did not fail with 422",
+    );
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(res.message, "user plan is expired");
+}
+
+#[tokio::test]
+async fn create_user_coin_successful() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
+    app.insert_coins().await;
+
+    let plan = app
+        .repo
+        .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
+        .await
+        .unwrap();
+
+    let mut conn = app.db.acquire().await.unwrap();
+
+    let order = app
+        .repo
+        .create_order(
+            &mut conn,
+            semi_wallet::repository::order::CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Completed,
+            },
+        )
+        .await
+        .unwrap();
+
+    app.repo
+        .create_user_plan_or_update_expires_at(
+            &mut conn,
+            CreateUserPlanOrUpdateExpiresAtArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                order_id: order.id,
+                days: 30,
+            },
+        )
+        .await
+        .unwrap();
+
     let body = HashMap::from([
         ("address", "btc_addr"),
         ("symbol", "BTC"),
@@ -282,8 +413,44 @@ async fn create_user_coin_successful() {
 async fn create_user_coin_network_not_set_successful() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
+    let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
     app.insert_coins().await;
+
+    let plan = app
+        .repo
+        .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
+        .await
+        .unwrap();
+
+    let mut conn = app.db.acquire().await.unwrap();
+
+    let order = app
+        .repo
+        .create_order(
+            &mut conn,
+            semi_wallet::repository::order::CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Completed,
+            },
+        )
+        .await
+        .unwrap();
+
+    app.repo
+        .create_user_plan_or_update_expires_at(
+            &mut conn,
+            CreateUserPlanOrUpdateExpiresAtArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                order_id: order.id,
+                days: 30,
+            },
+        )
+        .await
+        .unwrap();
+
     let body = HashMap::from([("address", "btc_addr"), ("symbol", "BTC")]);
     let response = client
         .post(&format!("{}/api/v1/user-coins/create", app.address))
@@ -312,8 +479,44 @@ async fn create_user_coin_network_not_set_successful() {
 async fn create_user_coin_empty_network_set_successful() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
+    let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
     app.insert_coins().await;
+
+    let plan = app
+        .repo
+        .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
+        .await
+        .unwrap();
+
+    let mut conn = app.db.acquire().await.unwrap();
+
+    let order = app
+        .repo
+        .create_order(
+            &mut conn,
+            semi_wallet::repository::order::CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Completed,
+            },
+        )
+        .await
+        .unwrap();
+
+    app.repo
+        .create_user_plan_or_update_expires_at(
+            &mut conn,
+            CreateUserPlanOrUpdateExpiresAtArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                order_id: order.id,
+                days: 30,
+            },
+        )
+        .await
+        .unwrap();
+
     let body = HashMap::from([("address", "btc_addr"), ("symbol", "BTC"), ("network", " ")]);
     let response = client
         .post(&format!("{}/api/v1/user-coins/create", app.address))
@@ -342,8 +545,44 @@ async fn create_user_coin_empty_network_set_successful() {
 async fn create_user_coin_with_network_set_successful() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
+    let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
     app.insert_coins().await;
+
+    let plan = app
+        .repo
+        .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
+        .await
+        .unwrap();
+
+    let mut conn = app.db.acquire().await.unwrap();
+
+    let order = app
+        .repo
+        .create_order(
+            &mut conn,
+            semi_wallet::repository::order::CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Completed,
+            },
+        )
+        .await
+        .unwrap();
+
+    app.repo
+        .create_user_plan_or_update_expires_at(
+            &mut conn,
+            CreateUserPlanOrUpdateExpiresAtArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                order_id: order.id,
+                days: 30,
+            },
+        )
+        .await
+        .unwrap();
+
     let body = HashMap::from([
         ("address", "usdt_addr"),
         ("symbol", "USDT"),

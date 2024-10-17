@@ -6,6 +6,10 @@ pub enum UserCoinError {
     CoinOrNetworkNotFound,
     #[snafu(display("user coin not found"))]
     UserCoinNotFound,
+    #[snafu(display("user does not have any plan"))]
+    UserPlanNotFound,
+    #[snafu(display("user plan is expired"))]
+    UserPlanExpired,
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,

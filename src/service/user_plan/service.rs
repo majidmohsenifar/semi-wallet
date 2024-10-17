@@ -1,11 +1,14 @@
 use sqlx::{Pool, Postgres};
 
 use crate::repository::{
-    db::Repository, models::Plan, user_plan::CreateUserPlanOrUpdateExpiresAtArgs,
+    db::Repository,
+    models::{Plan, UserPlan},
+    user_plan::CreateUserPlanOrUpdateExpiresAtArgs,
 };
 
 use super::error::UserPlanError;
 
+#[derive(Clone)]
 pub struct Service {
     db: Pool<Postgres>,
     repo: Repository,
@@ -45,5 +48,13 @@ impl Service {
             });
         }
         Ok(())
+    }
+
+    pub async fn get_user_plan_by_user_id(
+        &self,
+        db: &Pool<Postgres>,
+        user_id: i64,
+    ) -> Result<UserPlan, sqlx::Error> {
+        self.repo.get_user_plan_by_user_id(db, user_id).await
     }
 }

@@ -7,6 +7,7 @@ use validator::Validate;
 use crate::repository::{db::Repository, models::User, user_coin::CreateUserCoinArgs};
 
 use crate::service::coin::service::Service as CoinService;
+use crate::service::user_plan::service::Service as UserPlanService;
 
 use super::error::UserCoinError;
 
@@ -14,6 +15,7 @@ pub struct Service {
     db: Pool<Postgres>,
     repo: Repository,
     coin_service: CoinService,
+    user_plan_service: UserPlanService,
 }
 
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -38,11 +40,17 @@ pub struct CreateUserCoinParams {
 }
 
 impl Service {
-    pub fn new(db: Pool<Postgres>, repo: Repository, coin_service: CoinService) -> Self {
+    pub fn new(
+        db: Pool<Postgres>,
+        repo: Repository,
+        coin_service: CoinService,
+        user_plan_service: UserPlanService,
+    ) -> Self {
         Service {
             db,
             repo,
             coin_service,
+            user_plan_service,
         }
     }
 
@@ -94,6 +102,7 @@ impl Service {
         if params.network.is_none() || params.network.clone().unwrap().trim().is_empty() {
             params.network = Some(params.symbol.clone());
         }
+
         let coin = self
             .coin_service
             .get_coin_by_symbol_network(
@@ -111,6 +120,24 @@ impl Service {
                     }
                 }
             })?;
+
+        let user_plan = self
+            .user_plan_service
+            .get_user_plan_by_user_id(&self.db, user.id)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => UserCoinError::UserPlanNotFound,
+                e => {
+                    tracing::error!("cannot get_user_plan_by_user_id due to err: {}", e);
+                    UserCoinError::Unexpected {
+                        message: "cannot check if user has active plan".to_string(),
+                        source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                    }
+                }
+            })?;
+        if user_plan.expires_at < chrono::Utc::now() {
+            return Err(UserCoinError::UserPlanExpired);
+        }
 
         let id = self
             .repo

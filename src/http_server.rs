@@ -124,12 +124,12 @@ impl HttpServer {
             repo.clone(),
             plan_service.clone(),
             payment_service.clone(),
-            user_plan_service,
+            user_plan_service.clone(),
             cfg.stripe.secret,
         );
         let auth_service = AuthService::new(db_pool.clone(), user_service, cfg.jwt.secret);
         let user_coin_service =
-            UserCoinService::new(db_pool.clone(), repo.clone(), coin_service.clone());
+            UserCoinService::new(db_pool.clone(), repo.clone(), coin_service.clone(),user_plan_service.clone());
 
         let app_state = AppState {
             order_service,
