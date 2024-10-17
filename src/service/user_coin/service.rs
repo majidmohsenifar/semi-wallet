@@ -32,9 +32,9 @@ pub struct UserCoin {
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 pub struct CreateUserCoinParams {
-    #[validate(length(min = 1))]
+    #[validate(length(min = 32, message = "must be at least 32 characters"))]
     pub address: String,
-    #[validate(length(min = 1))]
+    #[validate(length(min = 2, message = "must be at least 2 characters"))]
     pub symbol: String,
     pub network: Option<String>,
 }

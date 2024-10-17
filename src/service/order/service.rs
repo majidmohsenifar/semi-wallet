@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
@@ -46,14 +48,14 @@ fn validate_plan_code(plan_code: &str) -> Result<(), ValidationError> {
     {
         return Ok(());
     }
-    Err(ValidationError::new("invalid plan_code"))
+    Err(ValidationError::new("invalid plan_code").with_message(Cow::from("not valid")))
 }
 
 fn validate_payment_provider(payment_provider: &str) -> Result<(), ValidationError> {
     if Provider::from(payment_provider).is_some() {
         return Ok(());
     }
-    Err(ValidationError::new("invalid payment_provider"))
+    Err(ValidationError::new("invalid payment_provider").with_message(Cow::from("not valid")))
 }
 
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -78,7 +80,7 @@ pub struct OrderDetailResult {
     pub payment_expire_date: i64,
 }
 
-#[derive(Serialize, Deserialize, Validate, ToSchema, IntoParams)]
+#[derive(Serialize, Deserialize, ToSchema, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct GetUserOrdersListParams {
     pub page: Option<i64>,

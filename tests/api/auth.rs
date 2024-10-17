@@ -23,7 +23,7 @@ async fn register_invalid_inputs() {
                 ("password", "12345678"),
                 ("confirm_password", "12345678"),
             ]),
-            "email is not valid",
+            "email: not valid",
         ),
         (
             HashMap::from([("email", "test@test.test")]),
@@ -33,13 +33,21 @@ async fn register_invalid_inputs() {
             HashMap::from([
                 ("email", "test@test.test"),
                 ("password", "1234567"),
-                ("confirm_password", "1234567"),
+                ("confirm_password", "12345678"),
             ]),
-            "password with less than 8 character",
+            "password: must be at least 8 characters",
         ),
         (
             HashMap::from([("email", "test@test.test"), ("password", "12345678")]),
-            "empty confirm_password",
+            "missing field `confirm_password`",
+        ),
+        (
+            HashMap::from([
+                ("email", "test@test.test"),
+                ("password", "12345678"),
+                ("confirm_password", "1234567"),
+            ]),
+            "confirm_password: must be at least 8 characters",
         ),
         (
             HashMap::from([
@@ -47,7 +55,7 @@ async fn register_invalid_inputs() {
                 ("password", "12345678"),
                 ("confirm_password", "123456789"),
             ]),
-            "confirm_password not the same as password",
+            "confirm_password is not the same as password",
         ),
     ];
 
@@ -63,12 +71,9 @@ async fn register_invalid_inputs() {
             response.status().as_u16(),
             "the api did not fail with 400 Bad Request",
         );
-        //TODO: we should handle the msg better for all the invalid inputs tests (login,
-        //create_order,...)
-
-        //let bytes = response.bytes().await.unwrap();
-        //let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
-        //assert_eq!(res.message, msg);
+        let bytes = response.bytes().await.unwrap();
+        let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(res.message, msg);
     }
 }
 
@@ -143,14 +148,18 @@ async fn login_invalid_inputs() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let test_cases = vec![
-        (HashMap::new(), "empty email"),
+        (HashMap::new(), "missing field `email`"),
         (
             HashMap::from([("email", "invalid"), ("password", "12345678")]),
-            "invalid email",
+            "email: not valid",
         ),
         (
             HashMap::from([("email", "test@test.test")]),
-            "empty password",
+            "missing field `password`",
+        ),
+        (
+            HashMap::from([("email", "test@test.test"), ("password", "1234567")]),
+            "password: must be at least 8 characters",
         ),
     ];
 
@@ -167,6 +176,9 @@ async fn login_invalid_inputs() {
             "the api did not fail with 400 Bad Request when the payload has the problem {}",
             msg
         );
+        let bytes = response.bytes().await.unwrap();
+        let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(res.message, msg);
     }
 }
 

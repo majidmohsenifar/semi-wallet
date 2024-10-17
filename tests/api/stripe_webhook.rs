@@ -228,8 +228,7 @@ async fn stripe_webhook_expired() {
     let mut notif_event_data = NotificationEventData {
         ..Default::default()
     };
-    notif_event_data.object = e_object; //TODO: why this works, but we cannot set it in the struct
-                                        //itself
+    notif_event_data.object = e_object;
     let event = Event {
         id: EventId::from_str("evt_e").unwrap(),
         type_: EventType::CheckoutSessionExpired,
@@ -356,8 +355,7 @@ async fn stripe_webhook_completed_first_time() {
     let mut notif_event_data = NotificationEventData {
         ..Default::default()
     };
-    notif_event_data.object = e_object; //TODO: why this works, but we cannot set it in the struct
-                                        //itself
+    notif_event_data.object = e_object;
     let event = Event {
         id: EventId::from_str("evt_e").unwrap(),
         type_: EventType::CheckoutSessionCompleted,
@@ -517,8 +515,7 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan() {
     let mut notif_event_data = NotificationEventData {
         ..Default::default()
     };
-    notif_event_data.object = e_object; //TODO: why this works, but we cannot set it in the struct
-                                        //itself
+    notif_event_data.object = e_object;
     let event = Event {
         id: EventId::from_str("evt_e").unwrap(),
         type_: EventType::CheckoutSessionCompleted,
@@ -684,8 +681,7 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan_buys
     let mut notif_event_data = NotificationEventData {
         ..Default::default()
     };
-    notif_event_data.object = e_object; //TODO: why this works, but we cannot set it in the struct
-                                        //itself
+    notif_event_data.object = e_object;
     let event = Event {
         id: EventId::from_str("evt_e").unwrap(),
         type_: EventType::CheckoutSessionCompleted,
@@ -852,8 +848,7 @@ async fn stripe_webhook_completed_already_has_old_expired_1_month_user_plan_buys
     let mut notif_event_data = NotificationEventData {
         ..Default::default()
     };
-    notif_event_data.object = e_object; //TODO: why this works, but we cannot set it in the struct
-                                        //itself
+    notif_event_data.object = e_object;
     let event = Event {
         id: EventId::from_str("evt_e").unwrap(),
         type_: EventType::CheckoutSessionCompleted,

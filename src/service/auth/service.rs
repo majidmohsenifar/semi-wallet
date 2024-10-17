@@ -17,11 +17,11 @@ pub struct Service {
 
 #[derive(Deserialize, Validate, ToSchema)]
 pub struct RegisterParams {
-    #[validate(email)]
+    #[validate(email(message = "not valid"))]
     pub email: String,
-    #[validate(length(min = 8))]
+    #[validate(length(min = 8, message = "must be at least 8 characters"))]
     pub password: String,
-    #[validate(length(min = 8))]
+    #[validate(length(min = 8, message = "must be at least 8 characters"))]
     pub confirm_password: String,
 }
 
@@ -30,8 +30,9 @@ pub struct RegisterResult {}
 
 #[derive(serde::Deserialize, Validate, ToSchema)]
 pub struct LoginParams {
-    #[validate(email)]
+    #[validate(email(message = "not valid"))]
     pub email: String,
+    #[validate(length(min = 8, message = "must be at least 8 characters"))]
     pub password: String,
 }
 

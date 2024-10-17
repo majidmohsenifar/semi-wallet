@@ -53,18 +53,24 @@ async fn create_order_invalid_inputs() {
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
     let client = reqwest::Client::new();
     let test_cases = vec![
-        (HashMap::new(), "empty plan_code"),
+        (HashMap::new(), "missing field `plan_code`"),
         (
             HashMap::from([("plan_code", PLAN_CODE_1_MONTH)]),
-            "empty payment provider",
+            "missing field `payment_provider`",
         ),
         (
-            HashMap::from([("plan_code", "NOT_EXIST")]),
-            "invalid plan_code",
+            HashMap::from([
+                ("payment_provider", "WRONG"),
+                ("plan_code", PLAN_CODE_1_MONTH),
+            ]),
+            "payment_provider: not valid",
         ),
         (
-            HashMap::from([("plan_code", "NOT_EXIST")]),
-            "invalid payment provider",
+            HashMap::from([
+                ("payment_provider", PAYMENT_PROVIDER_STRIPE),
+                ("plan_code", "WRONG"),
+            ]),
+            "plan_code: not valid",
         ),
     ];
 
@@ -80,8 +86,11 @@ async fn create_order_invalid_inputs() {
             400,
             response.status().as_u16(),
             "the api did not fail with 400 Bad Request when the payload has the problem {}",
-            msg
+            msg,
         );
+        let bytes = response.bytes().await.unwrap();
+        let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(res.message, msg);
     }
 }
 

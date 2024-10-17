@@ -189,20 +189,28 @@ async fn create_user_coin_invalid_inputs() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
+    let addr = "btc_addr_".repeat(4);
     let test_cases: Vec<(HashMap<&str, &str>, &str)> = vec![
-        (HashMap::new(), "without address"),
-        (HashMap::from([("network", "BTC")]), "empty address"),
+        (HashMap::new(), "missing field `address`"),
         (
-            HashMap::from([("address", "btc_addr"), ("network", "BTC")]),
-            "without symbol",
+            HashMap::from([("address", &addr[..]), ("network", "BTC")]),
+            "missing field `symbol`",
         ),
         (
-            HashMap::from([("address", "btc_addr"), ("symbol", ""), ("network", "BTC")]),
-            "empty symbol",
+            HashMap::from([
+                ("address", "btc_addr"),
+                ("symbol", "BTC"),
+                ("network", "BTC"),
+            ]),
+            "address: must be at least 32 characters",
+        ),
+        (
+            HashMap::from([("address", &addr[..]), ("symbol", ""), ("network", "BTC")]),
+            "symbol: must be at least 2 characters",
         ),
     ];
 
-    for (body, scenario) in test_cases {
+    for (body, msg) in test_cases {
         let response = client
             .post(&format!("{}/api/v1/user-coins/create", app.address))
             .bearer_auth(&token)
@@ -214,8 +222,12 @@ async fn create_user_coin_invalid_inputs() {
             400,
             response.status().as_u16(),
             "the api did not fail with 400 Bad Request when the payload has the problem {}",
-            scenario
+            msg
         );
+
+        let bytes = response.bytes().await.unwrap();
+        let res: ApiError<'_> = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(res.message, msg);
     }
 }
 

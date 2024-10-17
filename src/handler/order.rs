@@ -46,7 +46,12 @@ pub async fn create_order(
     };
     let params: CreateOrderParams = match serde_json::from_slice(&body) {
         Err(e) => {
-            return response::error(StatusCode::BAD_REQUEST, &e.to_string()).into_response();
+            let mut s = e.to_string();
+            if s.contains(" at") {
+                let parts: Vec<&str> = s.split(" at").collect();
+                s = parts[0].to_string();
+            }
+            return response::error(StatusCode::BAD_REQUEST, &s).into_response();
         }
         Ok(p) => p,
     };
