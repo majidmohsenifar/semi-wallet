@@ -8,6 +8,10 @@ pub struct Settings {
     pub server: ServerConfig,
     pub stripe: StripeConfig,
     pub jwt: JwtConfig,
+    pub btc: BlockchainConfig,
+    pub eth: BlockchainConfig,
+    pub sol: BlockchainConfig,
+    pub trx: BlockchainConfig,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -36,14 +40,22 @@ pub struct JwtConfig {
     pub secret: String,
 }
 
-//TODO: why not associative func?
-pub fn get_configuration() -> Result<Settings, config::ConfigError> {
-    #[cfg(debug_assertions)]
-    dotenv::dotenv().ok();
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct BlockchainConfig {
+    pub url: String,
+    pub decimals: u8,
+    pub blockbook_support: bool,
+}
 
-    let cfg = Config::builder()
-        //.add_source(config::File::with_name(".env"))
-        .add_source(config::Environment::default().separator("_"))
-        .build()?;
-    cfg.try_deserialize::<Settings>()
+impl Settings {
+    pub fn new() -> Result<Self, config::ConfigError> {
+        #[cfg(debug_assertions)]
+        dotenv::dotenv().ok();
+
+        let cfg = Config::builder()
+            //.add_source(config::File::with_name(".env"))
+            .add_source(config::Environment::default().separator("__"))
+            .build()?;
+        cfg.try_deserialize::<Settings>()
+    }
 }

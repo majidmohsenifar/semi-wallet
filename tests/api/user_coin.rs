@@ -4,7 +4,7 @@ use std::convert::From;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use claim::{assert_gt, assert_none};
 use semi_wallet::{
-    handler::response::{ApiError, ApiResponse},
+    handler::api::response::{ApiError, ApiResponse},
     repository::{
         models::OrderStatus, user_coin::CreateUserCoinArgs,
         user_plan::CreateUserPlanOrUpdateExpiresAtArgs,
@@ -237,8 +237,9 @@ async fn create_user_coin_coin_not_found() {
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
     app.insert_coins().await;
+    let addr = "btc_addr_".repeat(4);
     let body = HashMap::from([
-        ("address", "btc_addr"),
+        ("address", &addr[..]),
         ("symbol", "not_found"),
         ("network", "BTC"),
     ]);
@@ -265,8 +266,9 @@ async fn create_user_coin_user_plan_not_found() {
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
     app.insert_coins().await;
+    let addr = "btc_addr_".repeat(4);
     let body = HashMap::from([
-        ("address", "btc_addr"),
+        ("address", &addr[..]),
         ("symbol", "BTC"),
         ("network", "BTC"),
     ]);
@@ -329,8 +331,9 @@ async fn create_user_coin_expired_user_plan() {
         .await
         .unwrap();
 
+    let addr = "btc_addr_".repeat(4);
     let body = HashMap::from([
-        ("address", "btc_addr"),
+        ("address", &addr[..]),
         ("symbol", "BTC"),
         ("network", "BTC"),
     ]);
@@ -393,8 +396,9 @@ async fn create_user_coin_successful() {
         .await
         .unwrap();
 
+    let addr = "btc_addr_".repeat(4);
     let body = HashMap::from([
-        ("address", "btc_addr"),
+        ("address", &addr[..]),
         ("symbol", "BTC"),
         ("network", "BTC"),
     ]);
@@ -416,7 +420,7 @@ async fn create_user_coin_successful() {
     let data = res.data.unwrap();
     assert_gt!(data.id, 0);
     assert_eq!(data.coin_id, 1);
-    assert_eq!(data.address, "btc_addr");
+    assert_eq!(data.address, "btc_addr_".repeat(4));
     assert_eq!(data.symbol, "BTC");
     assert_eq!(data.network, "BTC");
 }
@@ -463,7 +467,8 @@ async fn create_user_coin_network_not_set_successful() {
         .await
         .unwrap();
 
-    let body = HashMap::from([("address", "btc_addr"), ("symbol", "BTC")]);
+    let addr = "btc_addr_".repeat(4);
+    let body = HashMap::from([("address", &addr[..]), ("symbol", "BTC")]);
     let response = client
         .post(&format!("{}/api/v1/user-coins/create", app.address))
         .bearer_auth(&token)
@@ -482,7 +487,7 @@ async fn create_user_coin_network_not_set_successful() {
     let data = res.data.unwrap();
     assert_gt!(data.id, 0);
     assert_eq!(data.coin_id, 1);
-    assert_eq!(data.address, "btc_addr");
+    assert_eq!(data.address, "btc_addr_".repeat(4));
     assert_eq!(data.symbol, "BTC");
     assert_eq!(data.network, "BTC");
 }
@@ -529,7 +534,8 @@ async fn create_user_coin_empty_network_set_successful() {
         .await
         .unwrap();
 
-    let body = HashMap::from([("address", "btc_addr"), ("symbol", "BTC"), ("network", " ")]);
+    let addr = "btc_addr_".repeat(4);
+    let body = HashMap::from([("address", &addr[..]), ("symbol", "BTC"), ("network", " ")]);
     let response = client
         .post(&format!("{}/api/v1/user-coins/create", app.address))
         .bearer_auth(&token)
@@ -548,7 +554,7 @@ async fn create_user_coin_empty_network_set_successful() {
     let data = res.data.unwrap();
     assert_gt!(data.id, 0);
     assert_eq!(data.coin_id, 1);
-    assert_eq!(data.address, "btc_addr");
+    assert_eq!(data.address, "btc_addr_".repeat(4));
     assert_eq!(data.symbol, "BTC");
     assert_eq!(data.network, "BTC");
 }
@@ -595,8 +601,9 @@ async fn create_user_coin_with_network_set_successful() {
         .await
         .unwrap();
 
+    let addr = "usdt_addr_".repeat(4);
     let body = HashMap::from([
-        ("address", "usdt_addr"),
+        ("address", &addr[..]),
         ("symbol", "USDT"),
         ("network", "ETH"),
     ]);
@@ -618,7 +625,7 @@ async fn create_user_coin_with_network_set_successful() {
     let data = res.data.unwrap();
     assert_gt!(data.id, 0);
     assert_eq!(data.coin_id, 3);
-    assert_eq!(data.address, "usdt_addr");
+    assert_eq!(data.address, "usdt_addr_".repeat(4));
     assert_eq!(data.symbol, "USDT");
     assert_eq!(data.network, "ETH");
 }

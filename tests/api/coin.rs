@@ -1,4 +1,4 @@
-use semi_wallet::handler::response::ApiResponse;
+use semi_wallet::handler::api::response::ApiResponse;
 use semi_wallet::service::coin::service::Coin;
 
 use crate::helpers::spawn_app;

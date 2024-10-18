@@ -1,4 +1,4 @@
-use crate::{config::Settings, handler, middleware, AppState, SharedState};
+use crate::{config::Settings, handler::{self,api::middleware}, AppState, SharedState};
 
 use axum::{
     middleware as axum_middleware,
@@ -39,32 +39,32 @@ pub struct HttpServer {
 #[openapi(
     modifiers(&SecurityAddon),
     paths(
-        handler::order::create_order,
-        handler::order::order_detail,
-        handler::order::user_orders_list,
-        handler::auth::register,
-        handler::auth::login,
-        handler::coin::coins_list,
-        handler::plan::plans_list,
-        handler::user_coin::user_coins_list,
-        handler::user_coin::create_user_coin,
-        handler::user_coin::delete_user_coin,
-        handler::user_coin::update_user_coin_address,
-        handler::payment::payment_providers,
+        handler::api::order::create_order,
+        handler::api::order::order_detail,
+        handler::api::order::user_orders_list,
+        handler::api::auth::register,
+        handler::api::auth::login,
+        handler::api::coin::coins_list,
+        handler::api::plan::plans_list,
+        handler::api::user_coin::user_coins_list,
+        handler::api::user_coin::create_user_coin,
+        handler::api::user_coin::delete_user_coin,
+        handler::api::user_coin::update_user_coin_address,
+        handler::api::payment::payment_providers,
     ),
     components(schemas(
         //aliases
-        crate::handler::response::ApiResponseCreateUserCoin, 
-        crate::handler::response::ApiResponseUserCoinsList,
-        crate::handler::response::ApiResponseLogin,
-        crate::handler::response::ApiResponseRegister,
-        crate::handler::response::ApiResponseCoinsList,
-        crate::handler::response::ApiResponsePlansList,
-        crate::handler::response::ApiResponseCreateOrder,
-        crate::handler::response::ApiResponseOrderDetail,
-        crate::handler::response::ApiResponseUserOrdersList,
-        crate::handler::response::ApiResponsePaymentProvidersList,
-        crate::handler::response::ApiResponseEmpty,
+        crate::handler::api::response::ApiResponseCreateUserCoin, 
+        crate::handler::api::response::ApiResponseUserCoinsList,
+        crate::handler::api::response::ApiResponseLogin,
+        crate::handler::api::response::ApiResponseRegister,
+        crate::handler::api::response::ApiResponseCoinsList,
+        crate::handler::api::response::ApiResponsePlansList,
+        crate::handler::api::response::ApiResponseCreateOrder,
+        crate::handler::api::response::ApiResponseOrderDetail,
+        crate::handler::api::response::ApiResponseUserOrdersList,
+        crate::handler::api::response::ApiResponsePaymentProvidersList,
+        crate::handler::api::response::ApiResponseEmpty,
 
         crate::service::order::service::OrderDetailResult,
         crate::service::order::service::CreateOrderParams,
@@ -80,7 +80,7 @@ pub struct HttpServer {
         crate::service::payment::service::PaymentProvider,
         crate::service::user_coin::service::CreateUserCoinParams,
         crate::service::user_coin::service::UserCoin,
-        crate::handler::response::Empty,
+        crate::handler::api::response::Empty,
     )),
 tags(
 (name = "semi-wallet", description = "semi wallet API")
@@ -166,32 +166,32 @@ impl HttpServer {
 
 pub async fn get_router(shared_state: SharedState) -> Router {
     let auth_routes = Router::new()
-        .route("/register", post(handler::auth::register))
-        .route("/login", post(handler::auth::login));
+        .route("/register", post(handler::api::auth::register))
+        .route("/login", post(handler::api::auth::login));
 
     let order_routes = Router::new()
-        .route("/", get(handler::order::user_orders_list))
-        .route("/create", post(handler::order::create_order))
-        .route("/detail", get(handler::order::order_detail))
+        .route("/", get(handler::api::order::user_orders_list))
+        .route("/create", post(handler::api::order::create_order))
+        .route("/detail", get(handler::api::order::order_detail))
         .layer(axum_middleware::from_fn_with_state(
             shared_state.clone(),
             middleware::jwt_auth::auth_middleware,
         ));
 
     let payments_routes = Router::new()
-        .route("/callback/stripe",post(handler::payment::handle_stripe_webhook))
-        .route("/providers", get(handler::payment::payment_providers));
+        .route("/callback/stripe",post(handler::api::payment::handle_stripe_webhook))
+        .route("/providers", get(handler::api::payment::payment_providers));
 
-    let coin_routes = Router::new().route("/", get(handler::coin::coins_list));
+    let coin_routes = Router::new().route("/", get(handler::api::coin::coins_list));
 
-    let plan_routes = Router::new().route("/", get(handler::plan::plans_list));
+    let plan_routes = Router::new().route("/", get(handler::api::plan::plans_list));
     let user_coin_routes = Router::new()
-        .route("/", get(handler::user_coin::user_coins_list))
-        .route("/create", post(handler::user_coin::create_user_coin))
-        .route("/delete", delete(handler::user_coin::delete_user_coin))
+        .route("/", get(handler::api::user_coin::user_coins_list))
+        .route("/create", post(handler::api::user_coin::create_user_coin))
+        .route("/delete", delete(handler::api::user_coin::delete_user_coin))
         .route(
             "/update-address",
-            patch(handler::user_coin::update_user_coin_address),
+            patch(handler::api::user_coin::update_user_coin_address),
         )
         .layer(axum_middleware::from_fn_with_state(
             shared_state.clone(),

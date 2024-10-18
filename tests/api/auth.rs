@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use semi_wallet::{
-    handler::response::{ApiError, ApiResponse},
+    handler::api::response::{ApiError, ApiResponse},
     repository::user::CreateUserArgs,
     service::auth::{
         bcrypt,
@@ -220,7 +220,7 @@ async fn login_invalid_credential_wrong_password() {
         .await
         .unwrap();
 
-    let body = HashMap::from([("email", email), ("password", "wrong")]);
+    let body = HashMap::from([("email", email), ("password", "wrong_wrong")]);
     let response = client
         .post(&format!("{}/api/v1/auth/login", app.address))
         .json(&body)

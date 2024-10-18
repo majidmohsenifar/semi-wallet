@@ -1,5 +1,5 @@
 use semi_wallet::{
-    handler::response::ApiResponse,
+    handler::api::response::ApiResponse,
     service::payment::service::{
         PaymentProvider, PAYMENT_PROVIDER_BITPAY, PAYMENT_PROVIDER_STRIPE,
     },

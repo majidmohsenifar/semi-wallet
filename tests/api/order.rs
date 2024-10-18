@@ -10,7 +10,7 @@ use wiremock::{
 };
 
 use semi_wallet::{
-    handler::response::{ApiError, ApiResponse},
+    handler::api::response::{ApiError, ApiResponse},
     repository::{
         models::{OrderStatus, PaymentStatus},
         order::CreateOrderArgs,

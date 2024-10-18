@@ -125,9 +125,10 @@ impl Service {
     ) -> Self {
         let stripe = stripe::StripeProvider::new(stripe_url, stripe_secret);
         let bitpay = bitpay::BitpayProvider::new();
-        let mut providers: HashMap<Provider, PaymentHandler> = HashMap::new();
-        providers.insert(Provider::Stripe, PaymentHandler::Stripe(stripe));
-        providers.insert(Provider::Bitpay, PaymentHandler::Bitpay(bitpay));
+        let providers = HashMap::from([
+            (Provider::Stripe, PaymentHandler::Stripe(stripe)),
+            (Provider::Bitpay, PaymentHandler::Bitpay(bitpay)),
+        ]);
         Service {
             db,
             repo,

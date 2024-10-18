@@ -5,7 +5,7 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::{handler::response, SharedState};
+use crate::{handler::api::response, SharedState};
 
 pub async fn auth_middleware(
     State(state): State<SharedState>,

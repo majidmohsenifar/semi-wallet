@@ -5,7 +5,7 @@ use semi_wallet::http_server::HttpServer;
 
 #[tokio::main]
 async fn main() {
-    let cfg = config::get_configuration().expect("cannot parse configuration");
+    let cfg = config::Settings::new().expect("cannot parse configuration");
     let subscriber = get_subscriber("semi-wallet".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
 

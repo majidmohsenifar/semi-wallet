@@ -99,7 +99,7 @@ pub async fn spawn_app() -> TestApp {
 
     let stripe_server = MockServer::start().await;
     let cfg = {
-        let mut cfg = config::get_configuration().expect("failed to get configuration");
+        let mut cfg = config::Settings::new().expect("cannot parse configuration");
         let db_dsn = configure_db(&cfg.db).await;
         cfg.db.dsn = db_dsn;
         //consider the port 0, so the os will provide a free port
