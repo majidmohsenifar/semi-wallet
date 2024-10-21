@@ -1,23 +1,29 @@
 use semi_wallet::handler::cmd;
 
+use clap::{Parser, Subcommand};
+
+#[derive(Debug, Parser)]
+#[command(name = "cli")]
+#[command(about = "Semi-wallet CLI", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Debug, Subcommand)]
+enum Commands {
+    UpdateUsersCoinAmount(cmd::update_users_coins_amount::UpdateUserCoinsAmountArgs),
+}
+
+///cargo run --bin cli update-users-coin-amount  --user-id 1 --symbol "BTC"
+
 #[tokio::main]
 async fn main() {
-    let cli_app = cmd::command::command()
-        .subcommand(cmd::update_users_coins_amount::update_users_coins_amount_command());
-    //TODO: we should use try_get_matches
-    let _matches = cli_app.get_matches();
+    let args = Cli::parse();
 
-    //let command = matches.subcommand().map_or_else(||{
-
-    //}, f);
-
-    //let res = matches.subcommand().map_or_else(
-    //|| cmd::default::run(&matches),
-    //|tup| match tup {
-    //("validate", subcommand_matches) => cmd::validate::run(&matches, subcommand_matches),
-    //_ => unreachable!(),
-    //},
-    //);
-
-    //cmd::result_exit(res);
+    match args.command {
+        Commands::UpdateUsersCoinAmount(args) => {
+            cmd::update_users_coins_amount::update_users_coins_amount_command(args);
+        }
+    }
 }
