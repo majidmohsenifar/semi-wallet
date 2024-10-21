@@ -12,7 +12,7 @@ pub const BLOCKCHAIN_SOL: &str = "SOL";
 pub const BLOCKCHAIN_TRX: &str = "TRX";
 
 pub struct Service {
-    handlers: HashMap<Blockchain, BlockchainHandler>,
+    handlers: HashMap<Blockchain, Box<dyn BlockchainHandler>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -42,11 +42,9 @@ impl Blockchain {
     }
 }
 
-enum BlockchainHandler {
-    Btc(BtcHandler),
-    Eth(EthHandler),
-    Sol(SolHandler),
-    Trx(TrxHandler),
+pub trait BlockchainHandler {
+    fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError>;
+    fn get_token_balance(&self, addr: &str) -> Result<f64, BlockchainError>;
 }
 
 impl Service {
@@ -72,30 +70,46 @@ impl Service {
             blockbook_support: settings.trx.blockbook_support,
         });
         let handlers = HashMap::from([
-            (Blockchain::BTC, BlockchainHandler::Btc(btc_handler)),
-            (Blockchain::ETH, BlockchainHandler::Eth(eth_handler)),
-            (Blockchain::SOL, BlockchainHandler::Sol(sol_handler)),
-            (Blockchain::TRX, BlockchainHandler::Trx(trx_handler)),
+            (
+                Blockchain::BTC,
+                Box::new(btc_handler) as Box<dyn BlockchainHandler>,
+            ),
+            (
+                Blockchain::ETH,
+                Box::new(eth_handler) as Box<dyn BlockchainHandler>,
+            ),
+            (
+                Blockchain::ETH,
+                Box::new(sol_handler) as Box<dyn BlockchainHandler>,
+            ),
+            (Blockchain::ETH, Box::new(trx_handler)),
         ]);
         Service { handlers }
     }
 
     pub async fn get_balance(
         &self,
-        blockchain: Blockchain,
+        network: &str,
+        mut coin: &str,
         addr: &str,
     ) -> Result<f64, BlockchainError> {
+        if coin.is_empty() {
+            coin = network;
+        }
+
+        let blockchain = Blockchain::from(network)?;
         let blockchain_handler = self
             .handlers
             .get(&blockchain)
             .ok_or(BlockchainError::InvalidBlockchain)?;
 
-        let balance = match blockchain_handler {
-            BlockchainHandler::Btc(handler) => handler.get_balance(addr).await,
-            BlockchainHandler::Eth(handler) => handler.get_balance(addr).await,
-            BlockchainHandler::Sol(handler) => handler.get_balance(addr).await,
-            BlockchainHandler::Trx(handler) => handler.get_balance(addr).await,
-        }?;
+        let balance;
+        if coin == network {
+            balance = blockchain_handler.get_balance(addr)?;
+        } else {
+            balance = blockchain_handler.get_token_balance(addr)?;
+        }
+        //TODO: we should convert the balance to human readable based on number of decimals
         Ok(balance)
     }
 }

@@ -1,10 +1,12 @@
-use bigdecimal::ToPrimitive;
+use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use utoipa::ToSchema;
 use validator::Validate;
 
-use crate::repository::{db::Repository, models::User, user_coin::CreateUserCoinArgs};
+use crate::repository::{
+    db::Repository, models::User, models::UserCoin as UserCoinModel, user_coin::CreateUserCoinArgs,
+};
 
 use crate::service::coin::service::Service as CoinService;
 use crate::service::user_plan::service::Service as UserPlanService;
@@ -197,18 +199,46 @@ impl Service {
     pub async fn update_user_coin_address(
         &self,
         user: User,
-        user_coin_id: i64,
+        id: i64,
         address: &str,
     ) -> Result<(), UserCoinError> {
         //TODO: validate address here
         let rows_affected = self
             .repo
-            .update_user_coin_address(&self.db, user.id, user_coin_id, address)
+            .update_user_coin_address(&self.db, user.id, id, address)
             .await
             .map_err(|e| {
                 tracing::error!("cannot update_user_coin_address due to err: {}", e);
                 UserCoinError::Unexpected {
-                    message: "cannot delete user coin".to_string(),
+                    message: "cannot update user coin address".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
+            })?;
+        if rows_affected == 0 {
+            return Err(UserCoinError::UserCoinNotFound);
+        }
+        Ok(())
+    }
+
+    pub async fn get_user_coins_by_user_ids(
+        &self,
+        user_ids: Vec<i64>,
+    ) -> Result<Vec<UserCoinModel>, sqlx::Error> {
+        self.repo
+            .get_user_coins_by_user_ids(&self.db, user_ids)
+            .await
+    }
+
+    pub async fn update_user_coin_amount(&self, id: i64, amount: f64) -> Result<(), UserCoinError> {
+        let amount = BigDecimal::from_f64(amount).ok_or(UserCoinError::InvalidAmount)?;
+        let rows_affected = self
+            .repo
+            .update_user_coin_amount(&self.db, id, amount)
+            .await
+            .map_err(|e| {
+                tracing::error!("cannot update_user_coin_amount due to err: {}", e);
+                UserCoinError::Unexpected {
+                    message: "cannot update user coin amount".to_string(),
                     source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                 }
             })?;

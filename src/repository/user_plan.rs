@@ -2,11 +2,18 @@ use sqlx::{PgConnection, Pool, Postgres};
 
 use super::{db::Repository, models::UserPlan};
 
+#[derive(Debug)]
 pub struct CreateUserPlanOrUpdateExpiresAtArgs {
     pub user_id: i64,
     pub plan_id: i64,
     pub order_id: i64,
     pub days: i16,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct GetNonExpiredUsersPlansRow {
+    pub id: i64,
+    pub user_id: i64,
 }
 
 impl Repository {
@@ -48,6 +55,22 @@ impl Repository {
         .bind(args.order_id)
         .bind(args.days)
         .fetch_one(&mut *conn)
+        .await?;
+        Ok(res)
+    }
+
+    pub async fn get_non_expired_users_plans(
+        &self,
+        db: &Pool<Postgres>,
+        last_id: i64,
+        page_size: i64,
+    ) -> Result<Vec<GetNonExpiredUsersPlansRow>, sqlx::Error> {
+        let res = sqlx::query_as::<_, GetNonExpiredUsersPlansRow>(
+            "SELECT id, user_id from users_plans WHERE expires_at >= NOW() AND id > $1 ORDER BY id ASC LIMIT $2",
+        )
+        .bind(last_id)
+        .bind(page_size)
+        .fetch_all(db)
         .await?;
         Ok(res)
     }

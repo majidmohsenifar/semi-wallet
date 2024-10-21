@@ -3,7 +3,7 @@ use sqlx::{Pool, Postgres};
 use crate::repository::{
     db::Repository,
     models::{Plan, UserPlan},
-    user_plan::CreateUserPlanOrUpdateExpiresAtArgs,
+    user_plan::{CreateUserPlanOrUpdateExpiresAtArgs, GetNonExpiredUsersPlansRow},
 };
 
 use super::error::UserPlanError;
@@ -56,5 +56,15 @@ impl Service {
         user_id: i64,
     ) -> Result<UserPlan, sqlx::Error> {
         self.repo.get_user_plan_by_user_id(db, user_id).await
+    }
+
+    pub async fn get_non_expired_users_plans(
+        &self,
+        last_id: i64,
+        page_size: i64,
+    ) -> Result<Vec<GetNonExpiredUsersPlansRow>, sqlx::Error> {
+        self.repo
+            .get_non_expired_users_plans(&self.db, last_id, page_size)
+            .await
     }
 }

@@ -10,6 +10,8 @@ pub enum UserCoinError {
     UserPlanNotFound,
     #[snafu(display("user plan is expired"))]
     UserPlanExpired,
+    #[snafu(display("invalid amount"))]
+    InvalidAmount,
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,

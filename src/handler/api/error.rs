@@ -13,7 +13,7 @@ impl IntoResponse for OrderError {
             Self::NotFound { .. } => StatusCode::NOT_FOUND,
             Self::PlanNotFound { .. } => StatusCode::BAD_REQUEST,
             Self::InvalidPaymentProvider => StatusCode::BAD_REQUEST,
-            Self::InvalidTotal { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::InvalidTotal => StatusCode::INTERNAL_SERVER_ERROR,
             Self::InvalidStripeReferenceID { .. } => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
@@ -30,7 +30,7 @@ impl IntoResponse for OrderError {
 impl IntoResponse for CoinError {
     fn into_response(self) -> axum::response::Response {
         let status_code = match self {
-            Self::NotFound { .. } => StatusCode::NOT_FOUND,
+            Self::NotFound => StatusCode::NOT_FOUND,
             Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (
@@ -65,7 +65,7 @@ impl IntoResponse for PlanError {
     fn into_response(self) -> axum::response::Response {
         let status_code = match self {
             Self::NotFound { .. } => StatusCode::NOT_FOUND,
-            Self::InvalidPrice { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::InvalidPrice => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (
@@ -81,10 +81,11 @@ impl IntoResponse for PlanError {
 impl IntoResponse for UserCoinError {
     fn into_response(self) -> axum::response::Response {
         let status_code = match self {
-            Self::CoinOrNetworkNotFound { .. } => StatusCode::NOT_FOUND,
-            Self::UserCoinNotFound { .. } => StatusCode::NOT_FOUND,
-            Self::UserPlanNotFound { .. } => StatusCode::NOT_FOUND,
-            Self::UserPlanExpired { .. } => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::CoinOrNetworkNotFound => StatusCode::NOT_FOUND,
+            Self::UserCoinNotFound => StatusCode::NOT_FOUND,
+            Self::UserPlanNotFound => StatusCode::NOT_FOUND,
+            Self::UserPlanExpired => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::InvalidAmount => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (

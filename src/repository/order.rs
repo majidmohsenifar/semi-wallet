@@ -78,7 +78,7 @@ impl Repository {
         page_size: i64,
     ) -> Result<Vec<Order>, sqlx::Error> {
         let res = sqlx::query_as::<_, Order>(
-            "SELECT * from orders where user_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3",
+            "SELECT * from orders WHERE user_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3",
         )
         .bind(user_id)
         .bind(page_size)
