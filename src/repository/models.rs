@@ -65,6 +65,7 @@ pub struct Coin {
     pub logo: String,
     pub network: String,
     pub decimals: i16,
+    pub contract_address: Option<String>,
     pub description: Option<String>,
 }
 

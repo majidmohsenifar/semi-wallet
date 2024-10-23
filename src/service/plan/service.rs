@@ -40,32 +40,33 @@ impl Service {
     }
 
     pub async fn get_plans_list(&self) -> Result<Vec<Plan>, PlanError> {
-        let res = self.repo.get_all_plans(&self.db).await;
-        if let Err(e) = res {
+        let res = self.repo.get_all_plans(&self.db).await.map_err(|e| {
             tracing::error!("cannot get_all_plans due to err: {}", e);
-            return Err(PlanError::Unexpected {
+            PlanError::Unexpected {
                 message: "cannot get plans from db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
-        let res = res.unwrap();
-        let mut plans = Vec::with_capacity(res.len());
-        for p in res {
-            let price = match p.price.to_f64() {
-                Some(float) => float,
-                None => {
-                    return Err(PlanError::InvalidPrice);
-                }
-            };
-            plans.push(Plan {
-                id: p.id,
-                code: p.code,
-                name: p.name,
-                price,
-                duration: p.duration,
-                save_percentage: p.save_percentage,
-            });
-        }
-        Ok(plans)
+            }
+        })?;
+
+        let plans: Result<Vec<Plan>, PlanError> = res
+            .into_iter()
+            .map(|p| {
+                let price = match p.price.to_f64() {
+                    Some(float) => float,
+                    None => {
+                        return Err(PlanError::InvalidPrice);
+                    }
+                };
+                Ok(Plan {
+                    id: p.id,
+                    code: p.code,
+                    name: p.name,
+                    price,
+                    duration: p.duration,
+                    save_percentage: p.save_percentage,
+                })
+            })
+            .collect();
+        plans
     }
 }

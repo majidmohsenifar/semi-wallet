@@ -30,18 +30,17 @@ impl Service {
     }
 
     pub async fn coins_list(&self) -> Result<Vec<Coin>, CoinError> {
-        let res = self.repo.get_all_coins(&self.db).await;
-        if let Err(e) = res {
-            tracing::error!("cannot get_all_coins due to err: {}", e);
-            return Err(CoinError::Unexpected {
-                message: "cannot get coins from db".to_string(),
+        let res = self
+            .repo
+            .get_all_coins(&self.db)
+            .await
+            .map_err(|e| CoinError::Unexpected {
+                message: "cannot get all coins".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
-        let res = res.unwrap();
-        let mut coins = Vec::with_capacity(res.len());
-        for c in res {
-            coins.push(Coin {
+            })?;
+        let coins = res
+            .into_iter()
+            .map(|c| Coin {
                 id: c.id,
                 symbol: c.symbol,
                 name: c.name,
@@ -49,8 +48,8 @@ impl Service {
                 network: c.network,
                 decimals: c.decimals,
                 description: c.description.unwrap_or("".to_string()),
-            });
-        }
+            })
+            .collect();
         Ok(coins)
     }
 
@@ -62,5 +61,17 @@ impl Service {
         self.repo
             .get_coin_by_symbol_network(&self.db, symbol, network)
             .await
+    }
+
+    pub async fn get_all_coins(&self) -> Result<Vec<CoinModel>, CoinError> {
+        let res = self
+            .repo
+            .get_all_coins(&self.db)
+            .await
+            .map_err(|e| CoinError::Unexpected {
+                message: "cannot get all coins".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            })?;
+        Ok(res)
     }
 }

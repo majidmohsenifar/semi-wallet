@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::config::Settings;
+use crate::{config::Settings, repository::models::Coin};
 
 use super::{
     btc::BtcHandler, error::BlockchainError, eth::EthHandler, sol::SolHandler, trx::TrxHandler,
@@ -44,7 +44,7 @@ impl Blockchain {
 
 pub trait BlockchainHandler {
     fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError>;
-    fn get_token_balance(&self, addr: &str) -> Result<f64, BlockchainError>;
+    fn get_token_balance(&self, contract_addr: &str, addr: &str) -> Result<f64, BlockchainError>;
 }
 
 impl Service {
@@ -87,29 +87,19 @@ impl Service {
         Service { handlers }
     }
 
-    pub async fn get_balance(
-        &self,
-        network: &str,
-        mut coin: &str,
-        addr: &str,
-    ) -> Result<f64, BlockchainError> {
-        if coin.is_empty() {
-            coin = network;
-        }
-
-        let blockchain = Blockchain::from(network)?;
+    pub async fn get_balance(&self, coin: &Coin, addr: &str) -> Result<f64, BlockchainError> {
+        let blockchain = Blockchain::from(&coin.network)?;
         let blockchain_handler = self
             .handlers
             .get(&blockchain)
             .ok_or(BlockchainError::InvalidBlockchain)?;
 
-        let balance;
-        if coin == network {
-            balance = blockchain_handler.get_balance(addr)?;
+        let balance = if coin.contract_address.is_some() {
+            let contract_address = coin.contract_address.as_ref();
+            blockchain_handler.get_token_balance(contract_address.unwrap(), addr)?
         } else {
-            balance = blockchain_handler.get_token_balance(addr)?;
-        }
-        //TODO: we should convert the balance to human readable based on number of decimals
+            blockchain_handler.get_balance(addr)?
+        };
         Ok(balance)
     }
 }

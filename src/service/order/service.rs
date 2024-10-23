@@ -597,30 +597,32 @@ impl Service {
                 }
             })?;
 
-        let mut orders = Vec::with_capacity(res.len());
-        for o in res {
-            let total = match o.total.to_f64() {
-                Some(float) => float,
-                None => {
-                    return Err(OrderError::InvalidTotal);
-                }
-            };
-            let status = serde_json::to_string(&o.status).map_err(|e| {
-                tracing::error!("cannot convert orderStatus to string due to err: {}", e);
-                OrderError::Unexpected {
-                    message: "cannot convert status".to_string(),
-                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-                }
-            })?;
-            let status = status.replace('"', "");
-            orders.push(Order {
-                id: o.id,
-                plan_id: o.plan_id,
-                total,
-                status,
-                created_at: o.created_at.timestamp(),
-            });
-        }
-        Ok(orders)
+        let orders: Result<Vec<Order>, OrderError> = res
+            .into_iter()
+            .map(|o| {
+                let total = match o.total.to_f64() {
+                    Some(float) => float,
+                    None => {
+                        return Err(OrderError::InvalidTotal);
+                    }
+                };
+                let status = serde_json::to_string(&o.status).map_err(|e| {
+                    tracing::error!("cannot convert orderStatus to string due to err: {}", e);
+                    return Err(OrderError::Unexpected {
+                        message: "cannot convert status".to_string(),
+                        source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                    });
+                })?;
+                let status = status.replace('"', "");
+                Ok(Order {
+                    id: o.id,
+                    plan_id: o.plan_id,
+                    total,
+                    status,
+                    created_at: o.created_at.timestamp(),
+                })
+            })
+            .collect();
+        orders
     }
 }

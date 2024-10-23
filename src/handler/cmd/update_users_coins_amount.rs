@@ -1,6 +1,11 @@
+use std::borrow::Borrow;
+
 use clap::Args;
 
+use crate::repository::models::Coin;
 use crate::service::blockchain::service::Service as BlockchainService;
+use crate::service::coin::error::CoinError;
+use crate::service::coin::service::Service as CoinService;
 use crate::service::user_coin::service::Service as UserCoinService;
 use crate::service::user_plan::service::Service as UserPlanService;
 
@@ -16,6 +21,7 @@ pub struct UpdateUserCoinsAmountArgs {
 }
 
 pub struct UpdateUserCoinsCommand {
+    coin_service: CoinService,
     user_coin_service: UserCoinService,
     user_plan_service: UserPlanService,
     blockchain_service: BlockchainService,
@@ -23,11 +29,13 @@ pub struct UpdateUserCoinsCommand {
 
 impl UpdateUserCoinsCommand {
     pub fn new(
+        coin_service: CoinService,
         user_coin_service: UserCoinService,
         user_plan_service: UserPlanService,
         blockchain_service: BlockchainService,
     ) -> Self {
         UpdateUserCoinsCommand {
+            coin_service,
             user_coin_service,
             user_plan_service,
             blockchain_service,
@@ -38,6 +46,15 @@ impl UpdateUserCoinsCommand {
         //TODO: handle args later
         let mut last_id = 0;
         let page_size = 100;
+        let coins = self.coin_service.get_all_coins().await;
+
+        let coins = match coins {
+            Err(e) => {
+                tracing::error!("cannot get_all_coins due to err: {}", e);
+                return;
+            }
+            Ok(data) => data,
+        };
 
         loop {
             let user_plans = self
@@ -74,10 +91,20 @@ impl UpdateUserCoinsCommand {
             };
 
             for uc in user_coins {
-                let balance = self
-                    .blockchain_service
-                    .get_balance(&uc.network, &uc.symbol, &uc.address)
-                    .await;
+                let coin = get_coin_by_id_from_all_coins(&coins, uc.coin_id);
+                let coin = match coin {
+                    Some(c) => c,
+                    None => {
+                        tracing::error!(
+                            "cannot get_coin_by_id_from_all_coins for coin_id {} in user_coin_id {}",
+                            uc.coin_id,
+                            uc.id,
+                        );
+                        continue;
+                    }
+                };
+
+                let balance = self.blockchain_service.get_balance(coin, &uc.address).await;
                 let balance = match balance {
                     Err(e) => {
                         tracing::error!(
@@ -116,4 +143,8 @@ impl UpdateUserCoinsCommand {
             last_id = user_plans.last().unwrap().id;
         }
     }
+}
+
+fn get_coin_by_id_from_all_coins(coins: &[Coin], id: i64) -> Option<&Coin> {
+    coins.iter().find(|c| c.id == id)
 }

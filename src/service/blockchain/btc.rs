@@ -18,7 +18,7 @@ impl BlockchainHandler for BtcHandler {
         unimplemented!()
     }
 
-    fn get_token_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
+    fn get_token_balance(&self, contract_addr: &str, addr: &str) -> Result<f64, BlockchainError> {
         unimplemented!()
     }
 }

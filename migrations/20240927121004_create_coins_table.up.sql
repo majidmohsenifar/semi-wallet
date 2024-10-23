@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS coins (
     logo VARCHAR(252) NOT NULL,
     network VARCHAR(8) NOT NULL,
     decimals SMALLINT NOT NULL,
+    contract_address VARCHAR(64) NULL,
     description TEXT NULL,
     UNIQUE(symbol, network)
 );
