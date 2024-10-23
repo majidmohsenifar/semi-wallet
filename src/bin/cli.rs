@@ -46,6 +46,7 @@ async fn main() {
     match args.command {
         Commands::UpdateUsersCoinAmount(args) => {
             let cmd = UpdateUserCoinsCommand::new(
+                coin_service,
                 user_coin_service,
                 user_plan_service,
                 blockchain_service,

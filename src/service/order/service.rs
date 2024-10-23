@@ -606,13 +606,15 @@ impl Service {
                         return Err(OrderError::InvalidTotal);
                     }
                 };
-                let status = serde_json::to_string(&o.status).map_err(|e| {
-                    tracing::error!("cannot convert orderStatus to string due to err: {}", e);
-                    return Err(OrderError::Unexpected {
-                        message: "cannot convert status".to_string(),
-                        source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-                    });
-                })?;
+                let status = match serde_json::to_string(&o.status) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(OrderError::Unexpected {
+                            message: "cannot convert status".to_string(),
+                            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                        });
+                    }
+                };
                 let status = status.replace('"', "");
                 Ok(Order {
                     id: o.id,
