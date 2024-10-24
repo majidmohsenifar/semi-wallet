@@ -3,6 +3,7 @@ use semi_wallet::client::postgres;
 use semi_wallet::config;
 use semi_wallet::repository::db::Repository;
 use semi_wallet::telemetry::{get_subscriber, init_subscriber};
+use std::process;
 
 use semi_wallet::handler::cmd::update_users_coins_amount::{self, UpdateUserCoinsCommand};
 use semi_wallet::service::blockchain::service::Service as BlockchainService;
@@ -27,14 +28,29 @@ enum Commands {
 
 #[tokio::main]
 async fn main() {
-    let cfg = config::Settings::new().expect("cannot parse configuration");
+    let cfg = config::Settings::new();
+    let cfg = match cfg {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            tracing::error!("cannot create configs to err{}", e);
+            process::exit(1);
+        }
+    };
     let subscriber = get_subscriber("semi-wallet-cli".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
-    let repo = Repository::new();
+    let repo = Repository::default();
     let db_pool = postgres::new_pg_pool(&cfg.db.dsn).await;
+    let http_client = reqwest::blocking::Client::builder().build();
+    let http_client = match http_client {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("cannot create http_client due to err{}", e);
+            process::exit(1);
+        }
+    };
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
-    let blockchain_service = BlockchainService::new(cfg);
+    let blockchain_service = BlockchainService::new(cfg, http_client);
     let user_coin_service = UserCoinService::new(
         db_pool.clone(),
         repo.clone(),

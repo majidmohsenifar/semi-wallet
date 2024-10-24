@@ -6,6 +6,8 @@ pub enum BlockchainError {
     InvalidBlockchain,
     #[snafu(display("invalid addr"))]
     InvalidAddress,
+    #[snafu(display("{blockchain} blockchain does not support token"))]
+    TokenNotSupported { blockchain: String },
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,

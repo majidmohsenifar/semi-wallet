@@ -1,8 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Repository {}
 
-impl Repository {
-    pub fn new() -> Self {
-        Repository {}
-    }
-}
+impl Repository {}

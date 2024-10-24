@@ -5,11 +5,12 @@ use super::{
 
 pub struct TrxHandler {
     cfg: BlockchainConfig,
+    http_client: reqwest::blocking::Client,
 }
 
 impl TrxHandler {
-    pub fn new(cfg: BlockchainConfig) -> Self {
-        TrxHandler { cfg }
+    pub fn new(cfg: BlockchainConfig, http_client: reqwest::blocking::Client) -> Self {
+        TrxHandler { cfg, http_client }
     }
 }
 

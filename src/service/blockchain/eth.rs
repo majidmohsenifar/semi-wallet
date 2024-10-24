@@ -5,11 +5,12 @@ use super::{
 
 pub struct EthHandler {
     cfg: BlockchainConfig,
+    http_client: reqwest::blocking::Client,
 }
 
 impl EthHandler {
-    pub fn new(cfg: BlockchainConfig) -> Self {
-        EthHandler { cfg }
+    pub fn new(cfg: BlockchainConfig, http_client: reqwest::blocking::Client) -> Self {
+        EthHandler { cfg, http_client }
     }
 }
 

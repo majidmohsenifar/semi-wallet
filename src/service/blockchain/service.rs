@@ -48,27 +48,36 @@ pub trait BlockchainHandler {
 }
 
 impl Service {
-    pub fn new(settings: Settings) -> Self {
-        let btc_handler = BtcHandler::new(BlockchainConfig {
-            url: settings.btc.url,
-            decimals: settings.btc.decimals,
-            blockbook_support: settings.btc.blockbook_support,
-        });
-        let eth_handler = EthHandler::new(BlockchainConfig {
-            url: settings.eth.url,
-            decimals: settings.eth.decimals,
-            blockbook_support: settings.eth.blockbook_support,
-        });
+    pub fn new(settings: Settings, http_client: reqwest::blocking::Client) -> Self {
+        let btc_handler = BtcHandler::new(
+            BlockchainConfig {
+                url: settings.btc.url,
+                decimals: settings.btc.decimals,
+                blockbook_support: settings.btc.blockbook_support,
+            },
+            http_client.clone(),
+        );
+        let eth_handler = EthHandler::new(
+            BlockchainConfig {
+                url: settings.eth.url,
+                decimals: settings.eth.decimals,
+                blockbook_support: settings.eth.blockbook_support,
+            },
+            http_client.clone(),
+        );
         let sol_handler = SolHandler::new(BlockchainConfig {
             url: settings.sol.url,
             decimals: settings.sol.decimals,
             blockbook_support: settings.sol.blockbook_support,
         });
-        let trx_handler = TrxHandler::new(BlockchainConfig {
-            url: settings.trx.url,
-            decimals: settings.trx.decimals,
-            blockbook_support: settings.trx.blockbook_support,
-        });
+        let trx_handler = TrxHandler::new(
+            BlockchainConfig {
+                url: settings.trx.url,
+                decimals: settings.trx.decimals,
+                blockbook_support: settings.trx.blockbook_support,
+            },
+            http_client.clone(),
+        );
         let handlers = HashMap::from([
             (
                 Blockchain::BTC,
