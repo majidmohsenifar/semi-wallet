@@ -20,7 +20,7 @@ pub struct Coin {
     pub name: String,
     pub logo: String,
     pub network: String,
-    pub decimals: i16,
+    pub decimals: i8,
     pub description: String,
 }
 
@@ -63,15 +63,7 @@ impl Service {
             .await
     }
 
-    pub async fn get_all_coins(&self) -> Result<Vec<CoinModel>, CoinError> {
-        let res = self
-            .repo
-            .get_all_coins(&self.db)
-            .await
-            .map_err(|e| CoinError::Unexpected {
-                message: "cannot get all coins".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            })?;
-        Ok(res)
+    pub async fn get_all_coins(&self) -> Result<Vec<CoinModel>, sqlx::Error> {
+        self.repo.get_all_coins(&self.db).await
     }
 }

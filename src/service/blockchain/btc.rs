@@ -1,19 +1,10 @@
 use serde::Deserialize;
 
-use super::{
-    error::BlockchainError,
-    service::{BlockchainConfig, BlockchainHandler},
-};
+use super::{error::BlockchainError, service::BlockchainConfig};
 
 pub struct BtcHandler {
     cfg: BlockchainConfig,
-    http_client: reqwest::blocking::Client,
-}
-
-impl BtcHandler {
-    pub fn new(cfg: BlockchainConfig, http_client: reqwest::blocking::Client) -> Self {
-        BtcHandler { cfg, http_client }
-    }
+    http_client: reqwest::Client,
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,8 +22,12 @@ struct BtcNodeRequest {
     params: Vec<String>,
 }
 
-impl BlockchainHandler for BtcHandler {
-    fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
+impl BtcHandler {
+    pub fn new(cfg: BlockchainConfig, http_client: reqwest::Client) -> Self {
+        BtcHandler { cfg, http_client }
+    }
+
+    pub async fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
         //TODO: handle this later
         unimplemented!()
         //TODO: handle the req body
@@ -65,7 +60,7 @@ impl BlockchainHandler for BtcHandler {
         //Ok(2.0)
     }
 
-    fn get_token_balance(&self, _: &str, _: &str) -> Result<f64, BlockchainError> {
+    pub async fn get_token_balance(&self, _: &str, _: &str, _: u8) -> Result<f64, BlockchainError> {
         Err(BlockchainError::TokenNotSupported {
             blockchain: "BTC".to_string(),
         })

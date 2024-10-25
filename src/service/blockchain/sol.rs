@@ -4,10 +4,7 @@ use solana_client::rpc_client::RpcClient;
 use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
 
-use super::{
-    error::BlockchainError,
-    service::{BlockchainConfig, BlockchainHandler},
-};
+use super::{error::BlockchainError, service::BlockchainConfig};
 
 pub struct SolHandler {
     cfg: BlockchainConfig,
@@ -19,10 +16,8 @@ impl SolHandler {
         let client = RpcClient::new_with_commitment(cfg.url.clone(), CommitmentConfig::confirmed());
         SolHandler { cfg, client }
     }
-}
 
-impl BlockchainHandler for SolHandler {
-    fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
+    pub async fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
         let pub_key = Pubkey::from_str(addr).map_err(|_e| BlockchainError::InvalidAddress)?;
         let b = self
             .client
@@ -34,7 +29,12 @@ impl BlockchainHandler for SolHandler {
         Ok(b as f64 / self.cfg.decimals as f64)
     }
 
-    fn get_token_balance(&self, contract_addr: &str, addr: &str) -> Result<f64, BlockchainError> {
+    pub async fn get_token_balance(
+        &self,
+        contract_addr: &str,
+        addr: &str,
+        _: u8,
+    ) -> Result<f64, BlockchainError> {
         let mint_key =
             Pubkey::from_str(contract_addr).map_err(|_e| BlockchainError::InvalidAddress)?;
         let pub_key = Pubkey::from_str(addr).map_err(|_e| BlockchainError::InvalidAddress)?;

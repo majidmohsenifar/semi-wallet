@@ -8,6 +8,10 @@ pub enum BlockchainError {
     InvalidAddress,
     #[snafu(display("{blockchain} blockchain does not support token"))]
     TokenNotSupported { blockchain: String },
+    #[snafu(display("status code is {code}"))]
+    UnsuccessfulStatusCode { code: u16 },
+    #[snafu(display("calling tron contract was not successful"))]
+    UnsuccessfulTronContractCall,
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,

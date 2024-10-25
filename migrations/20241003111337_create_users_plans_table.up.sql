@@ -5,4 +5,7 @@ CREATE TABLE IF NOT EXISTS users_plans (
     last_plan_id BIGINT NOT NULL REFERENCES plans(id),
     last_order_id BIGINT NOT NULL REFERENCES orders(id),
     expires_at TIMESTAMPTZ NOT NULL 
-)
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_plans_expires_at ON users_plans(expires_at);
+

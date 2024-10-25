@@ -1,25 +1,25 @@
-use super::{
-    error::BlockchainError,
-    service::{BlockchainConfig, BlockchainHandler},
-};
+use super::{error::BlockchainError, service::BlockchainConfig};
 
 pub struct EthHandler {
     cfg: BlockchainConfig,
-    http_client: reqwest::blocking::Client,
+    http_client: reqwest::Client,
 }
 
 impl EthHandler {
-    pub fn new(cfg: BlockchainConfig, http_client: reqwest::blocking::Client) -> Self {
+    pub fn new(cfg: BlockchainConfig, http_client: reqwest::Client) -> Self {
         EthHandler { cfg, http_client }
     }
-}
 
-impl BlockchainHandler for EthHandler {
-    fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
+    pub async fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
         unimplemented!()
     }
 
-    fn get_token_balance(&self, contract_addr: &str, addr: &str) -> Result<f64, BlockchainError> {
+    pub async fn get_token_balance(
+        &self,
+        contract_addr: &str,
+        addr: &str,
+        decimals: u8,
+    ) -> Result<f64, BlockchainError> {
         unimplemented!()
     }
 }

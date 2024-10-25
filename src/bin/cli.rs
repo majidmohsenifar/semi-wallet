@@ -40,7 +40,7 @@ async fn main() {
     init_subscriber(subscriber);
     let repo = Repository::default();
     let db_pool = postgres::new_pg_pool(&cfg.db.dsn).await;
-    let http_client = reqwest::blocking::Client::builder().build();
+    let http_client = reqwest::Client::builder().build();
     let http_client = match http_client {
         Ok(c) => c,
         Err(e) => {

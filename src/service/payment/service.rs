@@ -116,6 +116,28 @@ enum PaymentHandler {
     Bitpay(BitpayProvider),
 }
 
+impl PaymentHandler {
+    pub async fn make_payment(
+        &self,
+        params: MakePaymentParams,
+    ) -> Result<MakePaymentResult, PaymentError> {
+        match self {
+            Self::Stripe(handler) => handler.make_payment(params).await,
+            Self::Bitpay(handler) => handler.make_payment(params).await,
+        }
+    }
+
+    pub async fn check_payment(
+        &self,
+        params: CheckPaymentParams,
+    ) -> Result<CheckPaymentHandlerResult, PaymentError> {
+        match self {
+            Self::Stripe(handler) => handler.check_payment(params).await,
+            Self::Bitpay(handler) => handler.check_payment(params).await,
+        }
+    }
+}
+
 impl Service {
     pub fn new(
         db: Pool<Postgres>,
@@ -175,22 +197,16 @@ impl Service {
             order_id: params.order_id,
             extra_data: HashMap::new(),
         };
-        let make_payment_result = match payment_handler {
-            PaymentHandler::Stripe(stripe) => stripe.make_payment(make_payment_params).await,
-            PaymentHandler::Bitpay(bitpay) => bitpay.make_payment(make_payment_params).await,
-        };
 
-        if let Err(e) = make_payment_result {
-            tracing::error!("cannot make_payment due to err: {}", e);
-            return Err(PaymentError::Unexpected {
+        let make_payment_result = payment_handler
+            .make_payment(make_payment_params)
+            .await
+            .map_err(|e| PaymentError::Unexpected {
                 message: "cannot make payment".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
+            })?;
 
-        let make_payment_result = make_payment_result.unwrap();
-        let update_payment_result = self
-            .repo
+        self.repo
             .update_payment_external_id_payment_url_expires_at(
                 db_tx,
                 payment.id,
@@ -198,14 +214,11 @@ impl Service {
                 &make_payment_result.url,
                 make_payment_result.expires_at,
             )
-            .await;
-        if let Err(e) = update_payment_result {
-            tracing::error!("cannot update_payment_result due to err: {}", e);
-            return Err(PaymentError::Unexpected {
+            .await
+            .map_err(|e| PaymentError::Unexpected {
                 message: "cannot make payment".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
+            })?;
 
         Ok(CreatePaymentResult {
             payment,
@@ -235,10 +248,8 @@ impl Service {
             amount: p.amount.to_f64().unwrap(),
             external_id: p.external_id.clone().unwrap(),
         };
-        let handler_check_payment_result = match payment_handler {
-            PaymentHandler::Stripe(stripe) => stripe.check_payment(check_payment_params).await?,
-            PaymentHandler::Bitpay(bitpay) => bitpay.check_payment(check_payment_params).await?,
-        };
+        let handler_check_payment_result =
+            payment_handler.check_payment(check_payment_params).await?;
         //check_payment_result.status;
 
         Ok(CheckPaymentResult {

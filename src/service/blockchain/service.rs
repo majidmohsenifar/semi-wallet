@@ -12,7 +12,7 @@ pub const BLOCKCHAIN_SOL: &str = "SOL";
 pub const BLOCKCHAIN_TRX: &str = "TRX";
 
 pub struct Service {
-    handlers: HashMap<Blockchain, Box<dyn BlockchainHandler>>,
+    handlers: HashMap<Blockchain, BlockchainHandler>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -42,13 +42,56 @@ impl Blockchain {
     }
 }
 
-pub trait BlockchainHandler {
-    fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError>;
-    fn get_token_balance(&self, contract_addr: &str, addr: &str) -> Result<f64, BlockchainError>;
+pub enum BlockchainHandler {
+    Btc(BtcHandler),
+    Eth(EthHandler),
+    Sol(SolHandler),
+    Trx(TrxHandler),
+}
+
+impl BlockchainHandler {
+    async fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
+        match self {
+            Self::Btc(handler) => handler.get_balance(addr).await,
+            Self::Eth(handler) => handler.get_balance(addr).await,
+            Self::Sol(handler) => handler.get_balance(addr).await,
+            Self::Trx(handler) => handler.get_balance(addr).await,
+        }
+    }
+
+    async fn get_token_balance(
+        &self,
+        contract_addr: &str,
+        addr: &str,
+        decimals: u8,
+    ) -> Result<f64, BlockchainError> {
+        match self {
+            Self::Btc(handler) => {
+                handler
+                    .get_token_balance(contract_addr, addr, decimals)
+                    .await
+            }
+            Self::Eth(handler) => {
+                handler
+                    .get_token_balance(contract_addr, addr, decimals)
+                    .await
+            }
+            Self::Sol(handler) => {
+                handler
+                    .get_token_balance(contract_addr, addr, decimals)
+                    .await
+            }
+            Self::Trx(handler) => {
+                handler
+                    .get_token_balance(contract_addr, addr, decimals)
+                    .await
+            }
+        }
+    }
 }
 
 impl Service {
-    pub fn new(settings: Settings, http_client: reqwest::blocking::Client) -> Self {
+    pub fn new(settings: Settings, http_client: reqwest::Client) -> Self {
         let btc_handler = BtcHandler::new(
             BlockchainConfig {
                 url: settings.btc.url,
@@ -79,19 +122,10 @@ impl Service {
             http_client.clone(),
         );
         let handlers = HashMap::from([
-            (
-                Blockchain::BTC,
-                Box::new(btc_handler) as Box<dyn BlockchainHandler>,
-            ),
-            (
-                Blockchain::ETH,
-                Box::new(eth_handler) as Box<dyn BlockchainHandler>,
-            ),
-            (
-                Blockchain::ETH,
-                Box::new(sol_handler) as Box<dyn BlockchainHandler>,
-            ),
-            (Blockchain::ETH, Box::new(trx_handler)),
+            (Blockchain::BTC, BlockchainHandler::Btc(btc_handler)),
+            (Blockchain::ETH, BlockchainHandler::Eth(eth_handler)),
+            (Blockchain::SOL, BlockchainHandler::Sol(sol_handler)),
+            (Blockchain::TRX, BlockchainHandler::Trx(trx_handler)),
         ]);
         Service { handlers }
     }
@@ -105,9 +139,11 @@ impl Service {
 
         let balance = if coin.contract_address.is_some() {
             let contract_address = coin.contract_address.as_ref();
-            blockchain_handler.get_token_balance(contract_address.unwrap(), addr)?
+            blockchain_handler
+                .get_token_balance(contract_address.unwrap(), addr, coin.decimals as u8)
+                .await?
         } else {
-            blockchain_handler.get_balance(addr)?
+            blockchain_handler.get_balance(addr).await?
         };
         Ok(balance)
     }

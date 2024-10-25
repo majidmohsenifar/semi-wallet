@@ -22,7 +22,7 @@ impl Repository {
         db: &Pool<Postgres>,
         user_id: i64,
     ) -> Result<UserPlan, sqlx::Error> {
-        let res = sqlx::query_as::<_, UserPlan>("SELECT * from users_plans where user_id = $1")
+        let res = sqlx::query_as::<_, UserPlan>("SELECT * from users_plans WHERE user_id = $1")
             .bind(user_id)
             .fetch_one(db)
             .await?;

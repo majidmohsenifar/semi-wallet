@@ -1,15 +1,10 @@
-use std::borrow::Borrow;
-
 use clap::Args;
 
 use crate::repository::models::Coin;
 use crate::service::blockchain::service::Service as BlockchainService;
-use crate::service::coin::error::CoinError;
 use crate::service::coin::service::Service as CoinService;
 use crate::service::user_coin::service::Service as UserCoinService;
 use crate::service::user_plan::service::Service as UserPlanService;
-
-//pub const UPDATE_USERS_COINS_AMOUNT_COMMAND: &str = "update-users-coins-amount";
 
 #[derive(Debug, Args)]
 #[command(flatten_help = true)]
@@ -42,7 +37,7 @@ impl UpdateUserCoinsCommand {
         }
     }
 
-    pub async fn run(&self, args: UpdateUserCoinsAmountArgs) {
+    pub async fn run(&self, _args: UpdateUserCoinsAmountArgs) {
         //TODO: handle args later
         let mut last_id = 0;
         let page_size = 100;

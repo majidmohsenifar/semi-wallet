@@ -41,7 +41,7 @@ bcrypt = "0.15.1"
 jsonwebtoken = "9.3.0"
 url = "2.5.2"
 uuid = { version = "1.10.0", features = ["v4"] }
-reqwest = { version = "0.12.8", default-features = false, features = ["json", "rustls-tls","blocking"] }
+reqwest = { version = "0.12.8", default-features = false, features = ["json", "rustls-tls"] }
 serde_json = "1.0.128"
 validator = { version = "0.18.1", features = ["derive"]}
 axum-macros = "0.4.2"
@@ -56,11 +56,12 @@ clap = { version = "4.5.20", features = ["derive"]}
 solana-client = "1.1.0"
 solana-sdk = "1.1.0"
 spl-associated-token-account = "1.0.1"
+base58 = "0.2.0"
+hex = "0.4.3"
 
 [dev-dependencies]
 once_cell = "1.20.1"
 wiremock = "0.6.2"
 hmac = "0.12.1"
 sha2 = "0.10.8"
-hex = "0.4.3"
 claim = "0.5.0"
