@@ -100,14 +100,11 @@ impl Service {
             },
             http_client.clone(),
         );
-        let eth_handler = EthHandler::new(
-            BlockchainConfig {
-                url: settings.eth.url,
-                decimals: settings.eth.decimals,
-                blockbook_support: settings.eth.blockbook_support,
-            },
-            http_client.clone(),
-        );
+        let eth_handler = EthHandler::new(BlockchainConfig {
+            url: settings.eth.url,
+            decimals: settings.eth.decimals,
+            blockbook_support: settings.eth.blockbook_support,
+        });
         let sol_handler = SolHandler::new(BlockchainConfig {
             url: settings.sol.url,
             decimals: settings.sol.decimals,
