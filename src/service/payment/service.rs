@@ -227,31 +227,37 @@ impl Service {
     }
 
     pub async fn check_payment(&self, id: i64) -> Result<CheckPaymentResult, PaymentError> {
-        //TODO: handle all unwrap in this method
-        let p = self.repo.get_payment_by_id(&self.db, id).await;
-        let p = match p {
-            Ok(payment) => payment,
-            Err(e) => match e {
-                sqlx::Error::RowNotFound => return Err(PaymentError::NotFound { id }),
+        let p = self
+            .repo
+            .get_payment_by_id(&self.db, id)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => PaymentError::NotFound { id },
                 e => {
                     tracing::error!("cannot get_payment_by_id due to err: {}", e);
-                    return Err(PaymentError::Unexpected {
+                    PaymentError::Unexpected {
                         message: "cannot get payment by id from db".to_string(),
                         source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-                    });
+                    }
                 }
-            },
-        };
-        let payment_provider = Provider::from(&p.payment_provider_code).unwrap();
-        let payment_handler = self.providers.get(&payment_provider).unwrap();
+            })?;
+        let payment_provider =
+            Provider::from(&p.payment_provider_code).ok_or(PaymentError::InvalidPaymentProvider)?;
+
+        let payment_handler = self
+            .providers
+            .get(&payment_provider)
+            .ok_or(PaymentError::InvalidPaymentProvider)?;
+
+        let amount = p.amount.to_f64().ok_or(PaymentError::InvalidAmount)?;
+        let external_id = p.external_id.clone().ok_or(PaymentError::InvalidAmount)?;
+
         let check_payment_params = CheckPaymentParams {
-            amount: p.amount.to_f64().unwrap(),
-            external_id: p.external_id.clone().unwrap(),
+            amount,
+            external_id,
         };
         let handler_check_payment_result =
             payment_handler.check_payment(check_payment_params).await?;
-        //check_payment_result.status;
-
         Ok(CheckPaymentResult {
             status: handler_check_payment_result.status,
             amount: handler_check_payment_result.amount,

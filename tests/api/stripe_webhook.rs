@@ -1,5 +1,5 @@
 use bigdecimal::ToPrimitive;
-use claim::assert_gt;
+use claims::assert_gt;
 use std::str::FromStr;
 
 use stripe::{

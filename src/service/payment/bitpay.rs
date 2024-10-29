@@ -16,10 +16,6 @@ impl BitpayProvider {
         _params: MakePaymentParams,
     ) -> Result<MakePaymentResult, PaymentError> {
         todo!("impl later")
-        //Ok(MakePaymentResult {
-        //url: "".to_string(),         //TODO: handle this later
-        //external_id: "".to_string(), //TODO: handle this later
-        //})
     }
     pub async fn check_payment(
         &self,

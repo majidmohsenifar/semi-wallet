@@ -115,7 +115,7 @@ pub async fn spawn_app() -> TestApp {
     let address = format!("http://127.0.0.1:{}", http_server.port());
     tokio::spawn(http_server.run());
     let db = postgres::new_pg_pool(&cfg.db.dsn).await;
-    let repo = Repository::new();
+    let repo = Repository::default();
 
     TestApp {
         address,

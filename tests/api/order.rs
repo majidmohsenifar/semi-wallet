@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bigdecimal::{BigDecimal, FromPrimitive};
-use claim::assert_gt;
+use claims::assert_gt;
 use std::str::FromStr;
 use stripe::{CheckoutSession, CheckoutSessionId, CheckoutSessionStatus};
 use wiremock::{

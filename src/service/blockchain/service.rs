@@ -91,7 +91,7 @@ impl BlockchainHandler {
 }
 
 impl Service {
-    pub fn new(settings: Settings, http_client: reqwest::Client) -> Self {
+    pub fn new(settings: Settings, http_client: reqwest::Client) -> Result<Self, BlockchainError> {
         let btc_handler = BtcHandler::new(
             BlockchainConfig {
                 url: settings.btc.url,
@@ -104,7 +104,7 @@ impl Service {
             url: settings.eth.url,
             decimals: settings.eth.decimals,
             blockbook_support: settings.eth.blockbook_support,
-        });
+        })?;
         let sol_handler = SolHandler::new(BlockchainConfig {
             url: settings.sol.url,
             decimals: settings.sol.decimals,
@@ -124,7 +124,7 @@ impl Service {
             (Blockchain::SOL, BlockchainHandler::Sol(sol_handler)),
             (Blockchain::TRX, BlockchainHandler::Trx(trx_handler)),
         ]);
-        Service { handlers }
+        Ok(Service { handlers })
     }
 
     pub async fn get_balance(&self, coin: &Coin, addr: &str) -> Result<f64, BlockchainError> {

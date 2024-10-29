@@ -23,11 +23,14 @@ pub struct EthHandler {
 }
 
 impl EthHandler {
-    pub fn new(cfg: BlockchainConfig) -> Self {
-        //TODO: handle unwrap later
-        let client = RpcClient::new_http(reqwest::Url::parse(&cfg.url).unwrap());
+    pub fn new(cfg: BlockchainConfig) -> Result<Self, BlockchainError> {
+        let url = reqwest::Url::parse(&cfg.url).map_err(|e| BlockchainError::Unexpected {
+            message: "invalid eth node url".into(),
+            source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+        })?;
+        let client = RpcClient::new_http(url);
         let provider = ProviderBuilder::new().on_client(client);
-        EthHandler { cfg, provider }
+        Ok(EthHandler { cfg, provider })
     }
 
     pub async fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {

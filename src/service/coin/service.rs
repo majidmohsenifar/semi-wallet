@@ -20,7 +20,7 @@ pub struct Coin {
     pub name: String,
     pub logo: String,
     pub network: String,
-    pub decimals: i8,
+    pub decimals: i16,
     pub description: String,
 }
 

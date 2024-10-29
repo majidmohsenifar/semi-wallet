@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::convert::From;
 
 use bigdecimal::{BigDecimal, FromPrimitive};
-use claim::{assert_gt, assert_none};
+use claims::{assert_gt, assert_none};
 use semi_wallet::{
     handler::api::response::{ApiError, ApiResponse},
     repository::{

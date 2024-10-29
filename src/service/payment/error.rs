@@ -8,6 +8,8 @@ pub enum PaymentError {
     StripeError { message: String },
     #[snafu(display("payment with id {id} not found"))]
     NotFound { id: i64 },
+    #[snafu(display("invalid payment provider"))]
+    InvalidPaymentProvider,
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,

@@ -343,26 +343,21 @@ impl Service {
         {
             return Ok(());
         }
-        let mut payment_id: i64 = 0;
-        if let EventObject::CheckoutSession(session) = event.data.object {
-            payment_id = match session.client_reference_id {
+        let payment_id = if let EventObject::CheckoutSession(session) = event.data.object {
+            match session.client_reference_id {
                 Some(r_id) => match r_id.parse::<i64>() {
                     Ok(id) => id,
                     Err(_) => {
-                        return Err(OrderError::InvalidStripeReferenceID { id: r_id });
+                        return Err(OrderError::InvalidStripeReferenceId { id: r_id });
                     }
                 },
                 None => {
-                    ////TODO: this error is not correct, we should return better error related to object
-                    return Err(OrderError::InvalidStripeReferenceID { id: "".to_string() });
+                    return Err(OrderError::StripeReferenceIdNotFound);
                 }
             }
+        } else {
+            return Err(OrderError::InvalidStripeReferenceId { id: "".to_string() });
         };
-        if payment_id == 0 {
-            //TODO: this error is not correct, we should return better error related to invalid
-            //data
-            return Err(OrderError::InvalidStripeReferenceID { id: "".to_string() });
-        }
 
         self.check_payment_and_finalize_order(payment_id).await
     }

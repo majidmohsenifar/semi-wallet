@@ -11,7 +11,9 @@ pub enum OrderError {
     #[snafu(display("something went wrong with calculating total amount"))]
     InvalidTotal,
     #[snafu(display("invalid reference_id {id}"))]
-    InvalidStripeReferenceID { id: String },
+    InvalidStripeReferenceId { id: String },
+    #[snafu(display("stripe reference_id not found"))]
+    StripeReferenceIdNotFound,
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,

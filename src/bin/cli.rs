@@ -32,7 +32,7 @@ async fn main() {
     let cfg = match cfg {
         Ok(cfg) => cfg,
         Err(e) => {
-            tracing::error!("cannot create configs to err{}", e);
+            tracing::error!("cannot create configs to err: {}", e);
             process::exit(1);
         }
     };
@@ -44,13 +44,21 @@ async fn main() {
     let http_client = match http_client {
         Ok(c) => c,
         Err(e) => {
-            tracing::error!("cannot create http_client due to err{}", e);
+            tracing::error!("cannot create http_client due to err: {}", e);
             process::exit(1);
         }
     };
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
     let blockchain_service = BlockchainService::new(cfg, http_client);
+    let blockchain_service = match blockchain_service {
+        Ok(service) => service,
+        Err(e) => {
+            tracing::error!("cannot create blockchain service due to err: {}", e);
+            process::exit(1);
+        }
+    };
+
     let user_coin_service = UserCoinService::new(
         db_pool.clone(),
         repo.clone(),

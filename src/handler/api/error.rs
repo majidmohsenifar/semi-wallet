@@ -14,7 +14,8 @@ impl IntoResponse for OrderError {
             Self::PlanNotFound { .. } => StatusCode::BAD_REQUEST,
             Self::InvalidPaymentProvider => StatusCode::BAD_REQUEST,
             Self::InvalidTotal => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::InvalidStripeReferenceID { .. } => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::InvalidStripeReferenceId { .. } => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::StripeReferenceIdNotFound { .. } => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Unexpected { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (
