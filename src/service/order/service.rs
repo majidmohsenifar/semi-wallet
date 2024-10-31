@@ -363,6 +363,7 @@ impl Service {
     }
 
     pub async fn check_payment_and_finalize_order(
+        //TODO: handle all unwraps here
         &self,
         payment_id: i64,
     ) -> Result<(), OrderError> {

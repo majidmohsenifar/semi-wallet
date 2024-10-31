@@ -10,9 +10,9 @@ use crate::service::user_plan::service::Service as UserPlanService;
 #[command(flatten_help = true)]
 pub struct UpdateUserCoinsAmountArgs {
     #[arg(short, long)]
-    user_id: Option<i64>,
+    pub user_id: Option<i64>,
     #[arg(short, long)]
-    symbol: Option<String>,
+    pub symbol: Option<String>,
 }
 
 pub struct UpdateUserCoinsCommand {

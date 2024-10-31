@@ -148,7 +148,6 @@ impl HttpServer {
             .await
             .unwrap();
         let port = listener.local_addr().unwrap().port();
-        //axum::serve(listener, router).await.unwrap();
         HttpServer {
             router,
             listener,

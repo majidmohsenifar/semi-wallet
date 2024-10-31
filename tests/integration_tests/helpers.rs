@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use semi_wallet::{
     http_server::HttpServer,
@@ -89,19 +89,25 @@ static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
     ])
 });
 
-pub struct TestApp {
+pub struct TestApp<'a> {
     pub address: String,
     pub db: Pool<Postgres>,
     pub repo: Repository,
-    pub stripe_server: MockServer,
     pub cfg: config::Settings,
+    pub stripe_server: MockServer,
+    pub nodes: HashMap<&'a str, MockServer>,
+    //pub nodes: HashMap<&'a str, MockServer>,
 }
 
-pub async fn spawn_app() -> TestApp {
+pub async fn spawn_app<'a>() -> TestApp<'a> {
     Lazy::force(&TRACING);
     Lazy::force(&COINS);
 
     let stripe_server = MockServer::start().await;
+    let btc_node = MockServer::start().await;
+    let eth_node = MockServer::start().await;
+    let sol_node = MockServer::start().await;
+    let trx_node = MockServer::start().await;
     let cfg = {
         let mut cfg = config::Settings::new().expect("cannot parse configuration");
         let db_dsn = configure_db(&cfg.db).await;
@@ -109,8 +115,19 @@ pub async fn spawn_app() -> TestApp {
         //consider the port 0, so the os will provide a free port
         cfg.server.address = "127.0.0.1:0".to_string();
         cfg.stripe.url = stripe_server.uri();
+
+        cfg.btc.url = btc_node.uri();
+        cfg.eth.url = eth_node.uri();
+        cfg.sol.url = sol_node.uri();
+        cfg.trx.url = trx_node.uri();
         cfg
     };
+    let nodes = HashMap::from([
+        ("BTC", btc_node),
+        ("ETH", eth_node),
+        ("SOL", sol_node),
+        ("TRX", trx_node),
+    ]);
     let http_server = HttpServer::build(cfg.clone()).await;
     let address = format!("http://127.0.0.1:{}", http_server.port());
     tokio::spawn(http_server.run());
@@ -121,12 +138,13 @@ pub async fn spawn_app() -> TestApp {
         address,
         db,
         repo,
-        stripe_server,
         cfg,
+        stripe_server,
+        nodes,
     }
 }
 
-impl TestApp {
+impl<'a> TestApp<'a> {
     pub async fn get_jwt_token_and_user(&self, email: &str) -> (String, User) {
         //TODO: isn't it better to call register and login endpoint?
         let mut conn = self.db.acquire().await.unwrap();
