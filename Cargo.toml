@@ -53,9 +53,9 @@ tracing-bunyan-formatter = "0.3.9"
 tracing-log = "0.2.0"
 tower-http = { version = "0.6.1", features = ["trace","cors"] }
 clap = { version = "4.5.20", features = ["derive"]}
-solana-client = "1.1.0"
-solana-sdk = "1.1.0"
-spl-associated-token-account = "1.0.1"
+solana-client = "2.0.5"
+solana-sdk = "2.0.5"
+spl-associated-token-account = "4.0.0"
 base58 = "0.2.0"
 hex = "0.4.3"
 alloy = { version = "0.5.4", features = ["contract"] }
