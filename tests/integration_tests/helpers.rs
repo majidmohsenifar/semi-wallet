@@ -4,6 +4,7 @@ use semi_wallet::{
     http_server::HttpServer,
     repository::{
         coin::CreateCoinArgs, db::Repository, models::Coin, models::User, user::CreateUserArgs,
+        user_coin::CreateUserCoinArgs,
     },
     service::auth::jwt,
     telemetry::{get_subscriber, init_subscriber},
@@ -61,29 +62,55 @@ static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
             },
         ),
         (
-            "USDT_ETH",
+            "SOL",
             Coin {
                 id: 3,
+                symbol: "SOL".to_string(),
+                name: "Solana".to_string(),
+                network: "SOL".to_string(),
+                logo: "sol.png".to_string(),
+                decimals: 9,
+                contract_address: None,
+                description: Some("Solana is the third best".to_string()),
+            },
+        ),
+        (
+            "TRX",
+            Coin {
+                id: 4,
+                symbol: "TRX".to_string(),
+                name: "Tron".to_string(),
+                network: "TRX".to_string(),
+                logo: "trx.png".to_string(),
+                decimals: 6,
+                contract_address: None,
+                description: Some("Trx is the fourth best".to_string()),
+            },
+        ),
+        (
+            "USDT_ETH",
+            Coin {
+                id: 5,
                 symbol: "USDT".to_string(),
                 name: "Tether".to_string(),
                 network: "ETH".to_string(),
                 logo: "usdt.png".to_string(),
                 decimals: 18,
                 contract_address: None,
-                description: Some("Tether is the third best".to_string()),
+                description: Some("Tether is the best token".to_string()),
             },
         ),
         (
             "USDT_TRX",
             Coin {
-                id: 4,
+                id: 6,
                 symbol: "USDT".to_string(),
                 name: "Tether".to_string(),
                 network: "TRX".to_string(),
                 logo: "usdt_trx.png".to_string(),
                 decimals: 18,
                 contract_address: None,
-                description: Some("Tether is the third best".to_string()),
+                description: Some("Tether is the best token".to_string()),
             },
         ),
     ])
@@ -154,8 +181,8 @@ impl<'a> TestApp<'a> {
             .create_user(
                 &mut conn,
                 CreateUserArgs {
-                    email: String::from(email),
-                    password: encrypted_password,
+                    email,
+                    password: &encrypted_password,
                 },
             )
             .await
@@ -182,6 +209,34 @@ impl<'a> TestApp<'a> {
                 .await
                 .unwrap();
         }
+    }
+
+    pub async fn create_user_coin(
+        &self,
+        user_id: i64,
+        symbol: &str,
+        network: &str,
+        address: &str,
+    ) -> i64 {
+        let map_key = if symbol != network {
+            &format!("{}_{}", symbol, network)
+        } else {
+            symbol
+        };
+        let coin = COINS.get(map_key).unwrap();
+        self.repo
+            .create_user_coin(
+                &self.db,
+                CreateUserCoinArgs {
+                    user_id,
+                    coin_id: coin.id,
+                    symbol,
+                    network,
+                    address,
+                },
+            )
+            .await
+            .unwrap()
     }
 }
 

@@ -5,10 +5,7 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use claims::{assert_gt, assert_none};
 use semi_wallet::{
     handler::api::response::{ApiError, ApiResponse},
-    repository::{
-        models::OrderStatus, user_coin::CreateUserCoinArgs,
-        user_plan::CreateUserPlanOrUpdateExpiresAtArgs,
-    },
+    repository::{models::OrderStatus, user_plan::CreateUserPlanOrUpdateExpiresAtArgs},
     service::{plan::service::PLAN_CODE_1_MONTH, user_coin::service::UserCoin},
 };
 
@@ -39,19 +36,8 @@ async fn get_user_coins_successful() {
     app.insert_coins().await;
 
     let uc1 = app
-        .repo
-        .create_user_coin(
-            &app.db,
-            CreateUserCoinArgs {
-                user_id: user.id,
-                coin_id: 1,
-                symbol: "BTC".to_string(),
-                network: "BTC".to_string(),
-                address: "btc_addr".to_string(),
-            },
-        )
-        .await
-        .unwrap();
+        .create_user_coin(user.id, "BTC", "BTC", "btc_addr")
+        .await;
 
     app.repo
         .update_user_coin_amount(&app.db, uc1, BigDecimal::from_f64(2.18).unwrap())
@@ -59,52 +45,19 @@ async fn get_user_coins_successful() {
         .unwrap();
 
     let uc2 = app
-        .repo
-        .create_user_coin(
-            &app.db,
-            CreateUserCoinArgs {
-                user_id: user.id,
-                coin_id: 2,
-                symbol: "ETH".to_string(),
-                network: "ETH".to_string(),
-                address: "eth_addr".to_string(),
-            },
-        )
-        .await
-        .unwrap();
+        .create_user_coin(user.id, "ETH", "ETH", "eth_addr")
+        .await;
 
     app.repo
         .update_user_coin_amount(&app.db, uc2, BigDecimal::from_f64(0.0002).unwrap())
         .await
         .unwrap();
 
-    app.repo
-        .create_user_coin(
-            &app.db,
-            CreateUserCoinArgs {
-                user_id: user.id,
-                coin_id: 3,
-                symbol: "USDT".to_string(),
-                network: "ETH".to_string(),
-                address: "usdt_eth_addr".to_string(),
-            },
-        )
-        .await
-        .unwrap();
+    app.create_user_coin(user.id, "USDT", "ETH", "usdt_eth_addr")
+        .await;
 
-    app.repo
-        .create_user_coin(
-            &app.db,
-            CreateUserCoinArgs {
-                user_id: user.id,
-                coin_id: 4,
-                symbol: "USDT".to_string(),
-                network: "TRX".to_string(),
-                address: "usdt_trx_addr".to_string(),
-            },
-        )
-        .await
-        .unwrap();
+    app.create_user_coin(user.id, "USDT", "TRX", "usdt_trx_addr")
+        .await;
 
     let client = reqwest::Client::new();
     let response = client
@@ -624,7 +577,7 @@ async fn create_user_coin_with_network_set_successful() {
     assert_eq!(res.message, "");
     let data = res.data.unwrap();
     assert_gt!(data.id, 0);
-    assert_eq!(data.coin_id, 3);
+    assert_eq!(data.coin_id, 5);
     assert_eq!(data.address, "usdt_addr_".repeat(4));
     assert_eq!(data.symbol, "USDT");
     assert_eq!(data.network, "ETH");
@@ -692,19 +645,8 @@ async fn delete_user_coin_user_coin_does_not_belong_to_user() {
     app.insert_coins().await;
 
     let user_coin_id = app
-        .repo
-        .create_user_coin(
-            &app.db,
-            CreateUserCoinArgs {
-                user_id: other_user.id,
-                coin_id: 1,
-                symbol: "BTC".to_string(),
-                network: "BTC".to_string(),
-                address: "btc_addr".to_string(),
-            },
-        )
-        .await
-        .unwrap();
+        .create_user_coin(other_user.id, "BTC", "BTC", "btc_addr")
+        .await;
 
     let body = HashMap::from([("id", user_coin_id)]);
     let response = client
@@ -732,19 +674,8 @@ async fn delete_user_coin_successful() {
     app.insert_coins().await;
 
     let user_coin_id = app
-        .repo
-        .create_user_coin(
-            &app.db,
-            CreateUserCoinArgs {
-                user_id: user.id,
-                coin_id: 1,
-                symbol: "BTC".to_string(),
-                network: "BTC".to_string(),
-                address: "btc_addr".to_string(),
-            },
-        )
-        .await
-        .unwrap();
+        .create_user_coin(user.id, "BTC", "BTC", "btc_addr")
+        .await;
 
     let body = HashMap::from([("id", user_coin_id)]);
     let response = client
@@ -861,19 +792,8 @@ async fn update_user_coin_does_not_belong_to_user() {
     app.insert_coins().await;
 
     let user_coin_id = app
-        .repo
-        .create_user_coin(
-            &app.db,
-            CreateUserCoinArgs {
-                user_id: other_user.id,
-                coin_id: 1,
-                symbol: "BTC".to_string(),
-                network: "BTC".to_string(),
-                address: "btc_addr".to_string(),
-            },
-        )
-        .await
-        .unwrap();
+        .create_user_coin(other_user.id, "BTC", "BTC", "btc_addr")
+        .await;
 
     let body = HashMap::from([
         (
@@ -909,19 +829,8 @@ async fn update_user_coin_successful() {
     app.insert_coins().await;
 
     let user_coin_id = app
-        .repo
-        .create_user_coin(
-            &app.db,
-            CreateUserCoinArgs {
-                user_id: user.id,
-                coin_id: 1,
-                symbol: "BTC".to_string(),
-                network: "BTC".to_string(),
-                address: "btc_addr".to_string(),
-            },
-        )
-        .await
-        .unwrap();
+        .create_user_coin(user.id, "BTC", "BTC", "btc_addr")
+        .await;
 
     let body = HashMap::from([
         (

@@ -4,12 +4,12 @@ use sqlx::{Pool, Postgres};
 use super::{db::Repository, models::UserCoin};
 use sqlx::Row;
 
-pub struct CreateUserCoinArgs {
+pub struct CreateUserCoinArgs<'a> {
     pub user_id: i64,
     pub coin_id: i64,
-    pub symbol: String,
-    pub network: String,
-    pub address: String,
+    pub symbol: &'a str,
+    pub network: &'a str,
+    pub address: &'a str,
 }
 
 impl Repository {
@@ -30,7 +30,7 @@ impl Repository {
     pub async fn create_user_coin(
         &self,
         db: &Pool<Postgres>,
-        args: CreateUserCoinArgs,
+        args: CreateUserCoinArgs<'_>,
     ) -> Result<i64, sqlx::Error> {
         let res = sqlx::query(
             "INSERT INTO users_coins

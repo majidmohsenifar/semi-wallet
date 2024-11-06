@@ -87,8 +87,8 @@ async fn register_email_already_taken() {
         .create_user(
             &mut conn,
             CreateUserArgs {
-                email: email.to_string(),
-                password: "123456789".to_string(),
+                email,
+                password: "123456789",
             },
         )
         .await
@@ -213,8 +213,8 @@ async fn login_invalid_credential_wrong_password() {
         .create_user(
             &mut conn,
             CreateUserArgs {
-                email: email.to_string(),
-                password: encrypted_password,
+                email,
+                password: &encrypted_password,
             },
         )
         .await
@@ -246,8 +246,8 @@ async fn login_successful() {
         .create_user(
             &mut conn,
             CreateUserArgs {
-                email: email.to_string(),
-                password: encrypted_password,
+                email,
+                password: &encrypted_password,
             },
         )
         .await

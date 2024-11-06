@@ -2,9 +2,9 @@ use sqlx::{PgConnection, Pool, Postgres};
 
 use super::{db::Repository, models::User};
 
-pub struct CreateUserArgs {
-    pub email: String,
-    pub password: String,
+pub struct CreateUserArgs<'a> {
+    pub email: &'a str,
+    pub password: &'a str,
 }
 
 impl Repository {
@@ -23,7 +23,7 @@ impl Repository {
     pub async fn create_user(
         &self,
         conn: &mut PgConnection,
-        args: CreateUserArgs,
+        args: CreateUserArgs<'_>,
     ) -> Result<User, sqlx::Error> {
         let res = sqlx::query_as::<_, User>(
             "INSERT INTO users (

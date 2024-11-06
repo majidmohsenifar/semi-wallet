@@ -11,9 +11,9 @@ pub struct Service {
 }
 
 #[derive(Debug)]
-pub struct CreateUserParams {
-    pub email: String,
-    pub encrypted_password: String,
+pub struct CreateUserParams<'a> {
+    pub email: &'a str,
+    pub encrypted_password: &'a str,
 }
 
 #[derive(Debug)]
@@ -27,13 +27,13 @@ impl Service {
     }
 
     pub async fn get_user_by_email(&self, email: &str) -> Result<User, sqlx::Error> {
-        self.repo.get_user_by_email(&self.db, &email).await
+        self.repo.get_user_by_email(&self.db, email).await
     }
 
     pub async fn create_user(
         &self,
         conn: &mut PgConnection,
-        params: CreateUserParams,
+        params: CreateUserParams<'_>,
     ) -> Result<CreateUserResult, UserError> {
         let user = self
             .repo

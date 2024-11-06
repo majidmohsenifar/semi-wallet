@@ -16,13 +16,13 @@ pub struct Service {
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
-pub struct RegisterParams {
+pub struct RegisterParams<'a> {
     #[validate(email(message = "not valid"))]
-    pub email: String,
+    pub email: &'a str,
     #[validate(length(min = 8, message = "must be at least 8 characters"))]
-    pub password: String,
+    pub password: &'a str,
     #[validate(length(min = 8, message = "must be at least 8 characters"))]
-    pub confirm_password: String,
+    pub confirm_password: &'a str,
 }
 
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -50,8 +50,8 @@ impl Service {
         }
     }
 
-    pub async fn register(&self, params: RegisterParams) -> Result<RegisterResult, AuthError> {
-        let existing_user = self.user_service.get_user_by_email(&params.email).await;
+    pub async fn register(&self, params: RegisterParams<'_>) -> Result<RegisterResult, AuthError> {
+        let existing_user = self.user_service.get_user_by_email(params.email).await;
         match existing_user {
             Err(sqlx::Error::RowNotFound) => {}
             Err(e) => {
@@ -65,7 +65,7 @@ impl Service {
                 return Err(AuthError::EmailAlreadyTaken);
             }
         }
-        let encrypted_password = match bcrypt::encrypt_password(&params.password) {
+        let encrypted_password = match bcrypt::encrypt_password(params.password) {
             Err(e) => {
                 tracing::error!("cannot encrypt password due to err: {}", e);
                 return Err(AuthError::Unexpected {
@@ -91,7 +91,7 @@ impl Service {
                 &mut conn,
                 CreateUserParams {
                     email: params.email,
-                    encrypted_password,
+                    encrypted_password: &encrypted_password,
                 },
             )
             .await;

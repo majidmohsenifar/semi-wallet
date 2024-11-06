@@ -148,9 +148,9 @@ impl Service {
                 CreateUserCoinArgs {
                     user_id: user.id,
                     coin_id: coin.id,
-                    symbol: coin.symbol.clone(),
-                    network: coin.network.clone(),
-                    address: params.address.clone(),
+                    symbol: &coin.symbol,
+                    network: &coin.network,
+                    address: &params.address,
                 },
             )
             .await

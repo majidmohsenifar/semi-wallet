@@ -3,25 +3,28 @@ use serde::{Deserialize, Serialize};
 
 use super::{error::BlockchainError, service::BlockchainConfig};
 
+pub const GET_ACCOUNT_URI: &str = "/wallet/getaccount";
+pub const TRIGGER_SMART_CONTRACT_URI: &str = "/wallet/triggerconstantcontract";
+
 pub struct TrxHandler {
     cfg: BlockchainConfig,
     http_client: reqwest::Client,
 }
 
-#[derive(Serialize)]
-pub struct GetAccountRequestBody<'a> {
-    address: &'a str,
-    visible: bool,
+#[derive(Serialize, Deserialize)]
+pub struct GetAccountRequestBody {
+    pub address: String,
+    pub visible: bool,
 }
 
 #[derive(Deserialize)]
 #[allow(dead_code)]
 pub struct GetAccountResponseBody {
-    address: String,
-    balance: u64,
-    create_time: u64,
-    latest_opration_time: u64,
-    latest_consume_free_time: u64,
+    pub address: String,
+    pub balance: u64,
+    pub create_time: u64,
+    pub latest_opration_time: u64,
+    pub latest_consume_free_time: u64,
 }
 
 #[derive(Serialize)]
@@ -50,14 +53,13 @@ impl TrxHandler {
     }
 
     pub async fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
-        //GetAccountURI                = "/wallet/getaccount"
         let body = GetAccountRequestBody {
-            address: addr,
+            address: addr.to_string(),
             visible: true,
         };
         let response = self
             .http_client
-            .post(format!("{}/wallet/getaccount", self.cfg.url))
+            .post(format!("{}{}", self.cfg.url, GET_ACCOUNT_URI))
             .json(&body)
             .send()
             .await
@@ -105,7 +107,7 @@ impl TrxHandler {
         };
         let response = self
             .http_client
-            .post(format!("{}/wallet/triggerconstantcontract", self.cfg.url))
+            .post(format!("{}{}", self.cfg.url, TRIGGER_SMART_CONTRACT_URI))
             .json(&body)
             .send()
             .await

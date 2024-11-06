@@ -1,16 +1,16 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::{error::BlockchainError, service::BlockchainConfig};
 
-const ADDRESS_URI: &str = "api/v2/address";
+pub const ADDRESS_URI: &str = "/api/v2/address";
 
 pub struct BtcHandler {
     cfg: BlockchainConfig,
     http_client: reqwest::Client,
 }
 
-#[derive(Debug, Deserialize)]
-struct GetAddressResponse {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetAddressResponse {
     pub balance: String,
 }
 
@@ -22,7 +22,7 @@ impl BtcHandler {
     pub async fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
         let response = self
             .http_client
-            .get(format!("{}/{}/{}", self.cfg.url, ADDRESS_URI, addr))
+            .get(format!("{}{}/{}", self.cfg.url, ADDRESS_URI, addr))
             .send()
             .await
             .map_err(|e| BlockchainError::Unexpected {
@@ -50,7 +50,6 @@ impl BtcHandler {
                 message: "cannot parse string balance".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             })?;
-
         Ok(b / 10u32.pow(self.cfg.decimals as u32) as f64)
     }
 
