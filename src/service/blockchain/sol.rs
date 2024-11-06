@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use solana_client::rpc_client::RpcClient;
+use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
 
@@ -19,13 +19,13 @@ impl SolHandler {
 
     pub async fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
         let pub_key = Pubkey::from_str(addr).map_err(|_e| BlockchainError::InvalidAddress)?;
-        let b = self
-            .client
-            .get_balance(&pub_key)
-            .map_err(|e| BlockchainError::Unexpected {
+        let b = self.client.get_balance(&pub_key).await.map_err(|e| {
+            println!("error: {:?}", e);
+            BlockchainError::Unexpected {
                 message: "cannot get balance".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            })?;
+            }
+        })?;
         Ok(b as f64 / self.cfg.decimals as f64)
     }
 
@@ -42,6 +42,7 @@ impl SolHandler {
         let b = self
             .client
             .get_token_account_balance(&token_address)
+            .await
             .map_err(|e| BlockchainError::Unexpected {
                 message: "cannot get token balance".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,

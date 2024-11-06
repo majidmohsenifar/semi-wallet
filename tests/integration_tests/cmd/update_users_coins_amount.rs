@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use alloy::primitives::{hex::ToHexExt, Address};
 use bigdecimal::ToPrimitive;
 use bigdecimal::{BigDecimal, FromPrimitive};
@@ -20,6 +22,9 @@ use semi_wallet::{
     },
 };
 
+use serde_json::json;
+use solana_client::rpc_response::{Response, RpcAccountBalance, RpcResponseContext};
+use solana_sdk::pubkey::Pubkey;
 use wiremock::{
     matchers::{any, method, path},
     Mock, Request, ResponseTemplate,
@@ -69,12 +74,13 @@ async fn update_users_coins_amount_without_args() {
         .unwrap();
 
     let eth_addr = Address::random();
+    let sol_addr = Pubkey::new_unique();
 
     app.create_user_coin(user1.id, "BTC", "BTC", "btc_addr_1")
         .await;
     app.create_user_coin(user1.id, "ETH", "ETH", &eth_addr.encode_hex())
         .await;
-    app.create_user_coin(user1.id, "SOL", "SOL", "sol_addr_1")
+    app.create_user_coin(user1.id, "SOL", "SOL", &sol_addr.to_string())
         .await;
     app.create_user_coin(user1.id, "TRX", "TRX", "trx_addr_1")
         .await;
@@ -141,12 +147,33 @@ async fn update_users_coins_amount_without_args() {
     //mocking sol node
     Mock::given(path("/"))
         .and(method("POST"))
-        .and(move |_request: &Request| true)
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(btc::GetAddressResponse {
-                balance: "120000000".to_string(),
-            }),
-        )
+        .and(move |req: &Request| {
+            let req_body: HashMap<String, serde_json::Value> = req.body_json().unwrap();
+            let addr = match req_body.get("params") {
+                None => return false,
+                Some(val) => match val.as_array() {
+                    None => return false,
+                    Some(params) => &params[0],
+                },
+            };
+            if addr.as_str().unwrap() != sol_addr.to_string() {
+                return false;
+            }
+            true
+        })
+        .respond_with(ResponseTemplate::new(200).set_body_json({
+            let rpc_account_balance = RpcAccountBalance {
+                address: sol_addr.to_string(),
+                lamports: 3_000_000_000,
+            };
+            json!(Response {
+                context: RpcResponseContext {
+                    slot: 1,
+                    api_version: None
+                },
+                value: vec![rpc_account_balance],
+            })
+        }))
         .mount(app.nodes.get("SOL").unwrap())
         .await;
 
