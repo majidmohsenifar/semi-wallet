@@ -266,7 +266,7 @@ async fn update_users_coins_amount_without_args() {
                 );
             }
             (_, _) => {
-                panic!("we should not be here");
+                panic!("we should not be here at all");
             }
         }
     }
