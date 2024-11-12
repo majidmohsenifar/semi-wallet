@@ -145,7 +145,7 @@ impl TrxHandler {
                 message: "cannot convert balance hex to f64".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             })?;
-        Ok(balance as f64 / decimals as f64)
+        Ok(balance as f64 / 10_i32.pow(decimals as u32) as f64)
     }
 }
 
