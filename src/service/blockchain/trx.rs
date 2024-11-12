@@ -18,13 +18,9 @@ pub struct GetAccountRequestBody {
 }
 
 #[derive(Deserialize)]
-#[allow(dead_code)]
 pub struct GetAccountResponseBody {
     pub address: String,
     pub balance: u64,
-    pub create_time: u64,
-    pub latest_opration_time: u64,
-    pub latest_consume_free_time: u64,
 }
 
 #[derive(Serialize)]
@@ -85,7 +81,7 @@ impl TrxHandler {
                 message: "cannot deserialize the response".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             })?;
-        Ok(res.balance as f64 / self.cfg.decimals as f64)
+        Ok(res.balance as f64 / 10_i32.pow(self.cfg.decimals as u32) as f64)
     }
 
     pub async fn get_token_balance(

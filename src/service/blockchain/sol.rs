@@ -19,14 +19,15 @@ impl SolHandler {
 
     pub async fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
         let pub_key = Pubkey::from_str(addr).map_err(|_e| BlockchainError::InvalidAddress)?;
-        let b = self.client.get_balance(&pub_key).await.map_err(|e| {
-            println!("error: {:?}", e);
-            BlockchainError::Unexpected {
-                message: "cannot get balance".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            }
-        })?;
-        Ok(b as f64 / self.cfg.decimals as f64)
+        let b =
+            self.client
+                .get_balance(&pub_key)
+                .await
+                .map_err(|e| BlockchainError::Unexpected {
+                    message: "cannot get balance".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                })?;
+        Ok(b as f64 / 10_i32.pow(self.cfg.decimals as u32) as f64)
     }
 
     pub async fn get_token_balance(

@@ -23,10 +23,9 @@ use semi_wallet::{
 };
 
 use serde_json::json;
-use solana_client::rpc_response::{Response, RpcAccountBalance, RpcResponseContext};
 use solana_sdk::pubkey::Pubkey;
 use wiremock::{
-    matchers::{any, method, path},
+    matchers::{method, path},
     Mock, Request, ResponseTemplate,
 };
 
@@ -101,7 +100,7 @@ async fn update_users_coins_amount_without_args() {
         .await;
 
     //mocking eth node
-    Mock::given(any())
+    Mock::given(path("/"))
         .and(method("POST"))
         .and(move |req: &Request| {
             let req_body: alloy::rpc::json_rpc::Request<Vec<String>> = req.body_json().unwrap();
@@ -123,11 +122,12 @@ async fn update_users_coins_amount_without_args() {
         .await;
 
     //mocking USDT on eth node
-    Mock::given(path("/"))
+    Mock::given(path(""))
         .and(method("POST"))
         .and(move |req: &Request| {
             let req_body: alloy::rpc::json_rpc::Request<Vec<String>> = req.body_json().unwrap();
             if req_body.params[0] != eth_addr.encode_hex_with_prefix() {
+                println!("are we here================?");
                 return false;
             }
             true
@@ -162,16 +162,10 @@ async fn update_users_coins_amount_without_args() {
             true
         })
         .respond_with(ResponseTemplate::new(200).set_body_json({
-            let rpc_account_balance = RpcAccountBalance {
-                address: sol_addr.to_string(),
-                lamports: 3_000_000_000,
-            };
-            json!(Response {
-                context: RpcResponseContext {
-                    slot: 1,
-                    api_version: None
-                },
-                value: vec![rpc_account_balance],
+            json!({
+                "jsonrpc": "2.0",
+                "result": { "context": { "slot": 1 }, "value": 2_000_000_000 },
+                "id": 1
             })
         }))
         .mount(app.nodes.get("SOL").unwrap())
@@ -190,11 +184,10 @@ async fn update_users_coins_amount_without_args() {
             }
             true
         })
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(btc::GetAddressResponse {
-                balance: "120000000".to_string(),
-            }),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+         "address": "trx_addr_1",
+        "balance": 2_000_000,
+        })))
         .mount(app.nodes.get("TRX").unwrap())
         .await;
 
@@ -265,28 +258,28 @@ async fn update_users_coins_amount_without_args() {
                 );
             }
             ("SOL", "SOL") => {
-                assert_eq!(uc.amount, BigDecimal::from_f64(1.2)); //TODO: handle this later
+                assert_eq!(uc.amount, BigDecimal::from_u64(2));
                 assert_gt!(
                     uc.amount_updated_at.unwrap().timestamp(),
                     (chrono::Utc::now() - Duration::minutes(5)).timestamp()
                 );
             }
             ("TRX", "TRX") => {
-                assert_eq!(uc.amount, BigDecimal::from_f64(1.2)); //TODO: handle this later
+                assert_eq!(uc.amount, BigDecimal::from_u64(2));
                 assert_gt!(
                     uc.amount_updated_at.unwrap().timestamp(),
                     (chrono::Utc::now() - Duration::minutes(5)).timestamp()
                 );
             }
             ("USDT", "ETH") => {
-                assert_eq!(uc.amount, BigDecimal::from_f64(1.2)); //TODO: handle this later
+                assert_eq!(uc.amount, BigDecimal::from_u64(2000));
                 assert_gt!(
                     uc.amount_updated_at.unwrap().timestamp(),
                     (chrono::Utc::now() - Duration::minutes(5)).timestamp()
                 );
             }
             ("USDT", "TRX") => {
-                assert_eq!(uc.amount, BigDecimal::from_f64(1.2)); //TODO: handle this later
+                assert_eq!(uc.amount, BigDecimal::from_f64(1.2));
                 assert_gt!(
                     uc.amount_updated_at.unwrap().timestamp(),
                     (chrono::Utc::now() - Duration::minutes(5)).timestamp()
