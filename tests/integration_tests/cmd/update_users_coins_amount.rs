@@ -29,7 +29,7 @@ use wiremock::{
     Mock, Request, ResponseTemplate,
 };
 
-use crate::helpers::spawn_app;
+use crate::helpers::{spawn_app, COINS};
 
 //we have 2 users, one with active plan and all the coin and tokens need to be updated
 //one with no active plan, which means none of his user_coins amount should be updated
@@ -74,6 +74,7 @@ async fn update_users_coins_amount_without_args() {
 
     let eth_addr = Address::random();
     let sol_addr = Pubkey::new_unique();
+    let tron_addr = "TENgyRvC2AzqcWZu4jEBdStA5UCpM2X8yA";
 
     app.create_user_coin(user1.id, "BTC", "BTC", "btc_addr_1")
         .await;
@@ -81,11 +82,11 @@ async fn update_users_coins_amount_without_args() {
         .await;
     app.create_user_coin(user1.id, "SOL", "SOL", &sol_addr.to_string())
         .await;
-    app.create_user_coin(user1.id, "TRX", "TRX", "trx_addr_1")
+    app.create_user_coin(user1.id, "TRX", "TRX", tron_addr)
         .await;
     app.create_user_coin(user1.id, "USDT", "ETH", &eth_addr.encode_hex())
         .await;
-    app.create_user_coin(user1.id, "USDT", "TRX", "usdt_trx_addr_1")
+    app.create_user_coin(user1.id, "USDT", "TRX", tron_addr)
         .await;
 
     //mocking btc node
@@ -103,44 +104,36 @@ async fn update_users_coins_amount_without_args() {
     Mock::given(path("/"))
         .and(method("POST"))
         .and(move |req: &Request| {
-            let req_body: alloy::rpc::json_rpc::Request<Vec<String>> = req.body_json().unwrap();
-            if req_body.params[0] != eth_addr.encode_hex_with_prefix() {
-                return false;
-            }
-            true
-        })
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(alloy::rpc::json_rpc::Response {
-                id: alloy::rpc::json_rpc::Id::Number(1),
-                payload: alloy::rpc::json_rpc::ResponsePayload::<_, Box<&str>>::Success(format!(
-                    "0x{:x}",
-                    2_000_000_000_000_000_000i64
-                )),
-            }),
-        )
-        .mount(app.nodes.get("ETH").unwrap())
-        .await;
+            let req_body: serde_json::Value = req.body_json().unwrap();
+            let method = req_body.get("method").unwrap().as_str().unwrap();
 
-    //mocking USDT on eth node
-    Mock::given(path(""))
-        .and(method("POST"))
-        .and(move |req: &Request| {
-            let req_body: alloy::rpc::json_rpc::Request<Vec<String>> = req.body_json().unwrap();
-            if req_body.params[0] != eth_addr.encode_hex_with_prefix() {
-                println!("are we here================?");
-                return false;
+            if method == "eth_getBalance" {
+                let req_body: alloy::rpc::json_rpc::Request<Vec<String>> = req.body_json().unwrap();
+                if req_body.params[0] != eth_addr.encode_hex_with_prefix() {
+                    return false;
+                }
+                true
+            } else {
+                //TODO: I don't know how to check get token balance request
+                true
             }
-            true
         })
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(alloy::rpc::json_rpc::Response {
-                id: alloy::rpc::json_rpc::Id::Number(1),
-                payload: alloy::rpc::json_rpc::ResponsePayload::<_, Box<&str>>::Success(format!(
-                    "0x{:x}",
-                    2_000_000_000i64
-                )),
-            }),
-        )
+        .respond_with(move |req: &Request| {
+            let req_body: serde_json::Value = req.body_json().unwrap();
+            let method = req_body.get("method").unwrap().as_str().unwrap();
+            if method == "eth_getBalance" {
+                ResponseTemplate::new(200).set_body_json(alloy::rpc::json_rpc::Response {
+                    id: alloy::rpc::json_rpc::Id::Number(1),
+                    payload: alloy::rpc::json_rpc::ResponsePayload::<_, Box<&str>>::Success(
+                        format!("0x{:x}", 2_000_000_000_000_000_000i64),
+                    ),
+                })
+            } else {
+                ResponseTemplate::new(200).set_body_json({
+                    json!({"id":1, "jsonrpc":"2.0", "result":"0x0000000000000000000000000000000000000000000000000000000077359400"})//2000 $
+                })
+            }
+        })
         .mount(app.nodes.get("ETH").unwrap())
         .await;
 
@@ -179,13 +172,13 @@ async fn update_users_coins_amount_without_args() {
             if !body.visible {
                 return false;
             }
-            if body.address != "trx_addr_1" {
+            if body.address != tron_addr {
                 return false;
             }
             true
         })
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-         "address": "trx_addr_1",
+         "address": tron_addr,
         "balance": 2_000_000,
         })))
         .mount(app.nodes.get("TRX").unwrap())
@@ -194,12 +187,40 @@ async fn update_users_coins_amount_without_args() {
     //mocking USDT on trx node
     Mock::given(path(trx::TRIGGER_SMART_CONTRACT_URI))
         .and(method("POST"))
-        .and(move |_request: &Request| true)
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(btc::GetAddressResponse {
-                balance: "120000000".to_string(),
-            }),
-        )
+        .and(move |req: &Request| {
+            let body: trx::TriggerConstantContractRequestBody = req.body_json().unwrap();
+            if !body.visible {
+                return false;
+            }
+            if body.function_selector != "balanceOf(address)" {
+                return false;
+            }
+            if body.owner_address != tron_addr {
+                return false;
+            }
+            if &body.contract_address
+                != COINS
+                    .get("USDT_TRX")
+                    .unwrap()
+                    .contract_address
+                    .as_ref()
+                    .unwrap()
+            {
+                return false;
+            }
+            let parameter = trx::get_hex_address(tron_addr).unwrap();
+            if body.parameter != parameter {
+                return false;
+            }
+
+            true
+        })
+        .respond_with({
+            ResponseTemplate::new(200).set_body_json(trx::TriggerConstantContractResponseBody {
+                result: trx::TriggerConstantContractResultResponse { result: true },
+                constant_result: vec!["2000000000".to_string()],
+            })
+        })
         .mount(app.nodes.get("TRX").unwrap())
         .await;
 
@@ -279,7 +300,7 @@ async fn update_users_coins_amount_without_args() {
                 );
             }
             ("USDT", "TRX") => {
-                assert_eq!(uc.amount, BigDecimal::from_f64(1.2));
+                assert_eq!(uc.amount, BigDecimal::from_u64(2000));
                 assert_gt!(
                     uc.amount_updated_at.unwrap().timestamp(),
                     (chrono::Utc::now() - Duration::minutes(5)).timestamp()

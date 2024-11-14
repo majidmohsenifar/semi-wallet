@@ -33,7 +33,7 @@ static TRACING: Lazy<()> = Lazy::new(|| {
     };
 });
 
-static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
+pub static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
     BTreeMap::from([
         (
             "BTC",

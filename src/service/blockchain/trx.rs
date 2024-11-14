@@ -23,24 +23,24 @@ pub struct GetAccountResponseBody {
     pub balance: u64,
 }
 
-#[derive(Serialize)]
-struct TriggerConstantContractRequestBody<'a> {
-    owner_address: &'a str,
-    contract_address: &'a str,
-    function_selector: &'a str,
-    parameter: String,
-    visible: bool,
+#[derive(Serialize, Deserialize)]
+pub struct TriggerConstantContractRequestBody {
+    pub owner_address: String,
+    pub contract_address: String,
+    pub function_selector: String,
+    pub parameter: String,
+    pub visible: bool,
 }
 
-#[derive(Deserialize)]
-struct TriggerConstantContractResultResponse {
-    result: bool,
+#[derive(Deserialize, Serialize)]
+pub struct TriggerConstantContractResultResponse {
+    pub result: bool,
 }
 
-#[derive(Deserialize)]
-struct TriggerConstantContractResponseBody {
-    result: TriggerConstantContractResultResponse,
-    constant_result: Vec<String>,
+#[derive(Deserialize, Serialize)]
+pub struct TriggerConstantContractResponseBody {
+    pub result: TriggerConstantContractResultResponse,
+    pub constant_result: Vec<String>,
 }
 
 impl TrxHandler {
@@ -95,9 +95,9 @@ impl TrxHandler {
             source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
         })?;
         let body = TriggerConstantContractRequestBody {
-            owner_address: addr,
-            contract_address: contract_addr,
-            function_selector: "balanceOf(address)",
+            owner_address: addr.to_string(),
+            contract_address: contract_addr.to_string(),
+            function_selector: "balanceOf(address)".to_string(),
             parameter,
             visible: true,
         };

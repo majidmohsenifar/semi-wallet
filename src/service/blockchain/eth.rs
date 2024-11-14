@@ -30,6 +30,7 @@ impl EthHandler {
         })?;
         let client = RpcClient::new_http(url);
         let provider = ProviderBuilder::new().on_client(client);
+        //let provider = ProviderBuilder::new().on_http(url);
         Ok(EthHandler { cfg, provider })
     }
 
@@ -58,13 +59,15 @@ impl EthHandler {
         let addr = Address::from_hex(addr).unwrap();
         let contract_addr = Address::from_hex(contract_addr).unwrap();
         let contract = Token::new(contract_addr, &self.provider);
-        let b = contract.balanceOf(addr).call().await.map_err(|e| {
-            println!("Error: {:?}", e);
-            BlockchainError::Unexpected {
+
+        let b = contract
+            .balanceOf(addr)
+            .call()
+            .await
+            .map_err(|e| BlockchainError::Unexpected {
                 message: "cannot call contract".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            }
-        })?;
+            })?;
         let base = U256::from(10).pow(U256::from(decimals));
         let div = b._0.div(base); // We divide by 10^decimals
         let b = f64::from(div);
