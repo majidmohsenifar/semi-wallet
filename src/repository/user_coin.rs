@@ -124,4 +124,20 @@ impl Repository {
         .await?;
         Ok(user_coins)
     }
+
+    pub async fn get_user_coins_by_user_ids_coin_id(
+        &self,
+        db: &Pool<Postgres>,
+        user_ids: Vec<i64>,
+        coin_id: i64,
+    ) -> Result<Vec<UserCoin>, sqlx::Error> {
+        let user_coins = sqlx::query_as::<_, UserCoin>(
+            "SELECT * FROM users_coins WHERE user_id IN (SELECT unnest($1::bigint[])) AND coin_id = $2",
+        )
+        .bind(user_ids)
+        .bind(coin_id)
+        .fetch_all(db)
+        .await?;
+        Ok(user_coins)
+    }
 }

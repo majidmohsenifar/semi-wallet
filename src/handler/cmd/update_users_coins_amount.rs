@@ -1,6 +1,7 @@
 use clap::Args;
 
 use crate::repository::models::Coin;
+use crate::repository::user_plan::GetNonExpiredUsersPlansRow;
 use crate::service::blockchain::service::Service as BlockchainService;
 use crate::service::coin::service::Service as CoinService;
 use crate::service::user_coin::service::Service as UserCoinService;
@@ -13,6 +14,8 @@ pub struct UpdateUserCoinsAmountArgs {
     pub user_id: Option<i64>,
     #[arg(short, long)]
     pub symbol: Option<String>,
+    #[arg(short, long)]
+    pub network: Option<String>,
 }
 
 pub struct UpdateUserCoinsCommand {
@@ -37,8 +40,7 @@ impl UpdateUserCoinsCommand {
         }
     }
 
-    pub async fn run(&self, _args: UpdateUserCoinsAmountArgs) {
-        //TODO: handle args later
+    pub async fn run(&self, args: UpdateUserCoinsAmountArgs) {
         let mut last_id = 0;
         let page_size = 100;
         let coins = self.coin_service.get_all_coins().await;
@@ -52,30 +54,66 @@ impl UpdateUserCoinsCommand {
         };
 
         loop {
-            let user_plans = self
-                .user_plan_service
-                .get_non_expired_users_plans(last_id, page_size)
-                .await;
-            let user_plans = match user_plans {
-                Err(e) => {
-                    tracing::error!("cannot get_non_expired_users_plans due to err: {}", e);
+            let user_plans = if args.user_id.is_some() {
+                vec![GetNonExpiredUsersPlansRow {
+                    id: 0, //not important because loop will break later
+                    user_id: args.user_id.unwrap(),
+                }]
+            } else {
+                let user_plans = self
+                    .user_plan_service
+                    .get_non_expired_users_plans(last_id, page_size)
+                    .await;
+                let user_plans = match user_plans {
+                    Err(e) => {
+                        tracing::error!("cannot get_non_expired_users_plans due to err: {}", e);
+                        break;
+                    }
+                    Ok(data) => data,
+                };
+                if user_plans.is_empty() {
                     break;
                 }
-                Ok(data) => data,
+                user_plans
             };
-            if user_plans.is_empty() {
-                break;
-            }
 
             let user_ids: Vec<i64> = user_plans
                 .iter()
                 .map(|user_plan| user_plan.user_id)
                 .collect();
 
-            let user_coins = self
-                .user_coin_service
-                .get_user_coins_by_user_ids(user_ids)
-                .await;
+            let coin_id = if args.symbol.is_some() {
+                let symbol = args.symbol.as_ref();
+                let network = args.network.as_ref();
+                let network = match network {
+                    Some(n) => n,
+                    None => symbol.unwrap(),
+                };
+                let coin = self
+                    .coin_service
+                    .get_coin_by_symbol_network(symbol.unwrap(), network)
+                    .await;
+                let coin = match coin {
+                    Ok(c) => c,
+                    Err(e) => {
+                        tracing::error!("cannot get_coin due to err: {}", e);
+                        break;
+                    }
+                };
+                Some(coin.id)
+            } else {
+                None
+            };
+
+            let user_coins = if coin_id.is_some() {
+                self.user_coin_service
+                    .get_user_coins_by_user_ids_coin_id(user_ids, coin_id.unwrap())
+                    .await
+            } else {
+                self.user_coin_service
+                    .get_user_coins_by_user_ids(user_ids)
+                    .await
+            };
 
             let user_coins = match user_coins {
                 Err(e) => {

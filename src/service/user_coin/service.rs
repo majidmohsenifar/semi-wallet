@@ -229,6 +229,16 @@ impl Service {
             .await
     }
 
+    pub async fn get_user_coins_by_user_ids_coin_id(
+        &self,
+        user_ids: Vec<i64>,
+        coin_id: i64,
+    ) -> Result<Vec<UserCoinModel>, sqlx::Error> {
+        self.repo
+            .get_user_coins_by_user_ids_coin_id(&self.db, user_ids, coin_id)
+            .await
+    }
+
     pub async fn update_user_coin_amount(&self, id: i64, amount: f64) -> Result<(), UserCoinError> {
         let amount = BigDecimal::from_f64(amount).ok_or(UserCoinError::InvalidAmount)?;
         let rows_affected = self
