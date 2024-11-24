@@ -14,7 +14,7 @@ async fn get_coins_list_successful() {
         .send()
         .await
         .expect("failed to execute request");
-    assert_eq!(200, response.status().as_u16(),);
+    assert_eq!(200, response.status().as_u16());
     let bytes = response.bytes().await.unwrap();
     let res: ApiResponse<'_, Vec<Coin>> = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(res.message, "");
@@ -57,7 +57,7 @@ async fn get_coins_list_successful() {
     assert_eq!(tether_eth.name, "Tether");
     assert_eq!(tether_eth.logo, "usdt.png");
     assert_eq!(tether_eth.network, "ETH");
-    assert_eq!(tether_eth.decimals, 18);
+    assert_eq!(tether_eth.decimals, 6);
     assert_eq!(tether_eth.description, "Tether is the best token");
 
     let tether_trx = data.last().unwrap();
@@ -65,6 +65,6 @@ async fn get_coins_list_successful() {
     assert_eq!(tether_trx.name, "Tether");
     assert_eq!(tether_trx.logo, "usdt_trx.png");
     assert_eq!(tether_trx.network, "TRX");
-    assert_eq!(tether_trx.decimals, 18);
+    assert_eq!(tether_trx.decimals, 6);
     assert_eq!(tether_trx.description, "Tether is the best token");
 }
