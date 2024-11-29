@@ -42,6 +42,7 @@ pub static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
                 symbol: "BTC".to_string(),
                 name: "Bitcoin".to_string(),
                 network: "BTC".to_string(),
+                price_pair_symbol: Some("BTC-USDT".to_string()),
                 logo: "btc.png".to_string(),
                 decimals: 8,
                 contract_address: None,
@@ -55,6 +56,7 @@ pub static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
                 symbol: "ETH".to_string(),
                 name: "Ethereum".to_string(),
                 network: "ETH".to_string(),
+                price_pair_symbol: Some("ETH-USDT".to_string()),
                 logo: "eth.png".to_string(),
                 decimals: 18,
                 contract_address: None,
@@ -69,6 +71,7 @@ pub static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
                 name: "Solana".to_string(),
                 network: "SOL".to_string(),
                 logo: "sol.png".to_string(),
+                price_pair_symbol: Some("SOL-USDT".to_string()),
                 decimals: 9,
                 contract_address: None,
                 description: Some("Solana is the third best".to_string()),
@@ -81,6 +84,7 @@ pub static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
                 symbol: "TRX".to_string(),
                 name: "Tron".to_string(),
                 network: "TRX".to_string(),
+                price_pair_symbol: Some("TRX-USDT".to_string()),
                 logo: "trx.png".to_string(),
                 decimals: 6,
                 contract_address: None,
@@ -94,6 +98,7 @@ pub static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
                 symbol: "USDT".to_string(),
                 name: "Tether".to_string(),
                 network: "ETH".to_string(),
+                price_pair_symbol: None,
                 logo: "usdt.png".to_string(),
                 decimals: 6,
                 contract_address: Some("0xdac17f958d2ee523a2206206994597c13d831ec7".to_string()),
@@ -107,6 +112,7 @@ pub static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
                 symbol: "USDT".to_string(),
                 name: "Tether".to_string(),
                 network: "TRX".to_string(),
+                price_pair_symbol: None,
                 logo: "usdt_trx.png".to_string(),
                 decimals: 6,
                 contract_address: Some("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t".to_string()),
@@ -158,7 +164,9 @@ pub async fn spawn_app<'a>() -> TestApp<'a> {
     let http_server = HttpServer::build(cfg.clone()).await;
     let address = format!("http://127.0.0.1:{}", http_server.port());
     tokio::spawn(http_server.run());
-    let db = postgres::new_pg_pool(&cfg.db.dsn).await;
+    let db = postgres::new_pg_pool(&cfg.db.dsn)
+        .await
+        .expect("cannot create db_pool");
     let repo = Repository::default();
 
     TestApp {
@@ -201,6 +209,7 @@ impl<'a> TestApp<'a> {
                         symbol: c.symbol.clone(),
                         name: c.name.clone(),
                         network: c.network.clone(),
+                        price_pair_symbol: c.price_pair_symbol.clone(),
                         logo: c.logo.clone(),
                         decimals: c.decimals,
                         contract_address: c.contract_address.clone(),
@@ -268,7 +277,9 @@ async fn configure_db(db_cfg: &config::DbConfig) -> String {
         port = db_url.port().expect("empty port"),
         db = db_name,
     );
-    let db_pool = postgres::new_pg_pool(&db_dsn).await;
+    let db_pool = postgres::new_pg_pool(&db_dsn)
+        .await
+        .expect("cannot create db_pool");
     sqlx::migrate!("./migrations")
         .run(&db_pool)
         .await

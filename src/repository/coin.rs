@@ -6,6 +6,7 @@ pub struct CreateCoinArgs {
     pub symbol: String,
     pub name: String,
     pub network: String,
+    pub price_pair_symbol: Option<String>,
     pub logo: String,
     pub decimals: i16,
     pub description: String,
@@ -31,17 +32,19 @@ impl Repository {
             name,
             logo,
             network,
+            price_pair_symbol,
             decimals,
             contract_address,
             description
             ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7
+            $1, $2, $3, $4, $5, $6, $7, $8
             ) RETURNING *",
         )
         .bind(args.symbol)
         .bind(args.name)
         .bind(args.logo)
         .bind(args.network)
+        .bind(args.price_pair_symbol)
         .bind(args.decimals)
         .bind(args.contract_address)
         .bind(args.description)

@@ -39,7 +39,10 @@ async fn main() {
     let subscriber = get_subscriber("semi-wallet-cli".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
     let repo = Repository::default();
-    let db_pool = postgres::new_pg_pool(&cfg.db.dsn).await;
+    let db_pool = postgres::new_pg_pool(&cfg.db.dsn)
+        .await
+        .expect("cannot create db_pool");
+
     let http_client = reqwest::Client::builder().build();
     let http_client = match http_client {
         Ok(c) => c,

@@ -12,6 +12,7 @@ pub struct Settings {
     pub eth: BlockchainConfig,
     pub sol: BlockchainConfig,
     pub trx: BlockchainConfig,
+    pub binance: BinanceConfig,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -45,6 +46,11 @@ pub struct BlockchainConfig {
     pub url: String,
     pub decimals: u8,
     pub blockbook_support: bool,
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct BinanceConfig {
+    pub ws_url: String,
 }
 
 impl Settings {

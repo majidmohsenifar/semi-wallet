@@ -244,7 +244,9 @@ async fn update_users_coins_amount_without_args() {
         .await;
 
     let repo = Repository::default();
-    let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn).await;
+    let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn)
+        .await
+        .expect("cannot create db_pool");
     let http_client = reqwest::Client::builder().build().unwrap();
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
@@ -579,7 +581,9 @@ async fn update_users_coins_amount_with_user_id_args() {
         .await;
 
     let repo = Repository::default();
-    let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn).await;
+    let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn)
+        .await
+        .expect("cannot create db_pool");
     let http_client = reqwest::Client::builder().build().unwrap();
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
@@ -789,7 +793,9 @@ async fn update_users_coins_amount_with_symbol_args() {
         .await;
 
     let repo = Repository::default();
-    let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn).await;
+    let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn)
+        .await
+        .expect("cannot create db_pool");
     let http_client = reqwest::Client::builder().build().unwrap();
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
@@ -1011,7 +1017,9 @@ async fn update_users_coins_amount_with_symbol_and_network_args() {
         .await;
 
     let repo = Repository::default();
-    let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn).await;
+    let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn)
+        .await
+        .expect("cannot create db_pool");
     let http_client = reqwest::Client::builder().build().unwrap();
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
@@ -1217,7 +1225,9 @@ async fn update_users_coins_amount_with_user_id_and_symbol_and_network_args() {
         .await;
 
     let repo = Repository::default();
-    let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn).await;
+    let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn)
+        .await
+        .expect("cannot create db_pool");
     let http_client = reqwest::Client::builder().build().unwrap();
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());

@@ -110,7 +110,10 @@ impl HttpServer {
     pub async fn build(cfg: Settings) -> Self {
         //pub async fn run_server(cfg: Settings) {
         let repo = Repository::default();
-        let db_pool = postgres::new_pg_pool(&cfg.db.dsn).await;
+        let db_pool = postgres::new_pg_pool(&cfg.db.dsn)
+        .await
+        .expect("cannot create db_pool");
+
         let payment_service = PaymentService::new(
             db_pool.clone(),
             repo.clone(),
