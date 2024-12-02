@@ -67,4 +67,15 @@ impl Repository {
                 .await?;
         Ok(res)
     }
+
+    pub async fn get_not_null_price_pair_symbol_coins(
+        &self,
+        db: &Pool<Postgres>,
+    ) -> Result<Vec<Coin>, sqlx::Error> {
+        let coins =
+            sqlx::query_as::<_, Coin>("SELECT * FROM coins WHERE price_pair_symbol IS NOT NULL")
+                .fetch_all(db)
+                .await?;
+        Ok(coins)
+    }
 }

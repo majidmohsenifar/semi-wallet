@@ -4,6 +4,8 @@ use snafu::Snafu;
 pub enum CoinError {
     #[snafu(display("coin not found"))]
     NotFound,
+    #[snafu(display("invalid price provider"))]
+    InvalidPriceProvider,
     #[snafu(display("{message}"))]
     Unexpected {
         message: String,

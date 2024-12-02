@@ -66,4 +66,10 @@ impl Service {
     pub async fn get_all_coins(&self) -> Result<Vec<CoinModel>, sqlx::Error> {
         self.repo.get_all_coins(&self.db).await
     }
+
+    pub async fn get_not_null_price_pair_symbol_coins(
+        &self,
+    ) -> Result<Vec<CoinModel>, sqlx::Error> {
+        self.repo.get_all_coins(&self.db).await
+    }
 }
