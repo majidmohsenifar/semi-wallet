@@ -23,10 +23,11 @@ impl Provider {
     }
 }
 
-enum PriceProvider {
-    Binance(BinancePriceProvider),
+enum PriceProvider<'a> {
+    Binance(BinancePriceProvider<'a>),
 }
 
+#[derive(Clone)]
 pub struct PriceManager {
     price_storage: PriceStorage,
 }
@@ -39,7 +40,7 @@ impl PriceManager {
     pub async fn run_update_prices(
         &self,
         price_provider_name: &str,
-        coins: Vec<Coin>,
+        coins: &[Coin],
         binance_cfg: config::BinanceConfig,
     ) {
         let provider = Provider::from(price_provider_name).unwrap();

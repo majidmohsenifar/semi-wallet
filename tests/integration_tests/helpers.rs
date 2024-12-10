@@ -18,6 +18,7 @@ use semi_wallet::{client::postgres, config};
 
 use once_cell::sync::Lazy;
 use wiremock::MockServer;
+use ws_mock::ws_mock_server::WsMockServer;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_filter_level = "info".to_string();
@@ -130,6 +131,7 @@ pub struct TestApp<'a> {
     pub cfg: config::Settings,
     pub stripe_server: MockServer,
     pub redis_client: Client,
+    pub binance_ws_server: WsMockServer,
     pub nodes: HashMap<&'a str, MockServer>,
 }
 
@@ -142,6 +144,7 @@ pub async fn spawn_app<'a>() -> TestApp<'a> {
     let eth_node = MockServer::start().await;
     let sol_node = MockServer::start().await;
     let trx_node = MockServer::start().await;
+    let binance_ws_server = WsMockServer::start().await;
     let cfg = {
         let mut cfg = config::Settings::new().expect("cannot parse configuration");
         let db_dsn = configure_db(&cfg.db).await;
@@ -154,6 +157,9 @@ pub async fn spawn_app<'a>() -> TestApp<'a> {
         cfg.eth.url = eth_node.uri();
         cfg.sol.url = sol_node.uri();
         cfg.trx.url = trx_node.uri();
+
+        cfg.binance.ws_url = binance_ws_server.uri().await;
+
         cfg
     };
     let nodes = HashMap::from([
@@ -180,6 +186,7 @@ pub async fn spawn_app<'a>() -> TestApp<'a> {
         cfg,
         stripe_server,
         redis_client,
+        binance_ws_server,
         nodes,
     }
 }

@@ -52,6 +52,6 @@ async fn main() {
     let price_manager = PriceManager::new(price_storage);
 
     price_manager
-        .run_update_prices(PRICE_PROVIDER_BINANCE, coins, cfg.binance.clone())
+        .run_update_prices(PRICE_PROVIDER_BINANCE, &coins, cfg.binance.clone())
         .await;
 }

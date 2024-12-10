@@ -8,17 +8,17 @@ use serde::{Deserialize, Serialize};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
 
-pub struct BinancePriceProvider {
+pub struct BinancePriceProvider<'a> {
     price_storage: PriceStorage,
-    binance_pair_coin_symbol_map: HashMap<String, String>,
+    binance_pair_coin_symbol_map: HashMap<String, &'a str>,
     ws_url: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct SubscribeRequest<'a> {
-    id: u32,
-    method: &'a str,
-    params: Vec<&'a str>,
+    pub id: u32,
+    pub method: &'a str,
+    pub params: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,18 +37,24 @@ pub struct AvgPriceEvent {
     pub last_trade_time: i64,
 }
 
-impl BinancePriceProvider {
-    pub fn new(price_storage: PriceStorage, coins: Vec<Coin>, ws_url: String) -> Self {
-        let map: HashMap<String, String> = coins
-            .into_iter()
+impl<'a> BinancePriceProvider<'a> {
+    pub fn new(price_storage: PriceStorage, coins: &'a [Coin], ws_url: String) -> Self {
+        let map: HashMap<String, &str> = coins
+            .iter()
             .map(|c| {
-                (
-                    c.price_pair_symbol.unwrap().replace('-', "").to_lowercase(),
-                    c.symbol,
-                )
+                {
+                    (
+                        c.price_pair_symbol
+                            .as_ref()
+                            .unwrap()
+                            .as_str()
+                            .replace('-', "")
+                            .to_lowercase(),
+                        c.symbol.as_ref(),
+                    )
+                }
             })
             .collect();
-
         BinancePriceProvider {
             price_storage,
             binance_pair_coin_symbol_map: map,
@@ -68,7 +74,6 @@ impl BinancePriceProvider {
             .map(|k| format!("{}@avgPrice", k))
             .collect();
 
-        let params = params.iter().map(|s| s.as_str()).collect();
         let subscribe_request = SubscribeRequest {
             id: 1,
             method: "SUBSCRIBE",
@@ -80,16 +85,15 @@ impl BinancePriceProvider {
         while let Some(message) = reader.try_next().await.unwrap() {
             if let Message::Text(text) = &message {
                 let avg_price: AvgPriceEvent = serde_json::from_str(text).unwrap();
-                let coin_symbol = match self.get_coin_symbol_from_binance_symbol(&avg_price.symbol)
-                {
-                    Some(symbol) => symbol,
-                    None => continue,
-                };
+                let coin_symbol =
+                    match self.get_coin_symbol_from_binance_symbol(avg_price.symbol.to_string()) {
+                        Some(symbol) => symbol,
+                        None => continue,
+                    };
                 self.price_storage
                     .set_price(coin_symbol, avg_price.average_price.parse().unwrap())
                     .await
                     .unwrap();
-                //println!("{text}");
             } else if let Message::Ping(_) = &message {
                 writer.send(Message::Pong(Vec::from([1]))).await.unwrap();
             } else if let Message::Close(_) = &message {
@@ -98,7 +102,9 @@ impl BinancePriceProvider {
         }
     }
 
-    fn get_coin_symbol_from_binance_symbol(&self, binance_symbol: &str) -> Option<&String> {
-        self.binance_pair_coin_symbol_map.get(binance_symbol)
+    fn get_coin_symbol_from_binance_symbol(&self, binance_symbol: String) -> Option<&str> {
+        self.binance_pair_coin_symbol_map
+            .get(&binance_symbol.to_lowercase())
+            .copied()
     }
 }
