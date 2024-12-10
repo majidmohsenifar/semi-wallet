@@ -7,6 +7,8 @@ use crate::repository::{db::Repository, models::Coin as CoinModel};
 use super::error::CoinError;
 use serde::{Deserialize, Serialize};
 
+pub const USDT_SYMBOL: &str = "USDT";
+
 #[derive(Clone)]
 pub struct Service {
     db: Pool<Postgres>,

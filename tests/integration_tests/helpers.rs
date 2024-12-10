@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
+use redis::{self, Client};
 use semi_wallet::{
     http_server::HttpServer,
     repository::{
@@ -128,8 +129,8 @@ pub struct TestApp<'a> {
     pub repo: Repository,
     pub cfg: config::Settings,
     pub stripe_server: MockServer,
+    pub redis_client: Client,
     pub nodes: HashMap<&'a str, MockServer>,
-    //pub nodes: HashMap<&'a str, MockServer>,
 }
 
 pub async fn spawn_app<'a>() -> TestApp<'a> {
@@ -168,6 +169,9 @@ pub async fn spawn_app<'a>() -> TestApp<'a> {
         .await
         .expect("cannot create db_pool");
     let repo = Repository::default();
+    let redis_client = semi_wallet::client::redis::new_redis_client(cfg.redis.clone())
+        .await
+        .unwrap();
 
     TestApp {
         address,
@@ -175,6 +179,7 @@ pub async fn spawn_app<'a>() -> TestApp<'a> {
         repo,
         cfg,
         stripe_server,
+        redis_client,
         nodes,
     }
 }

@@ -1,7 +1,10 @@
 use clap::{Parser, Subcommand};
 use semi_wallet::client::postgres;
+use semi_wallet::client::redis;
 use semi_wallet::config;
 use semi_wallet::repository::db::Repository;
+use semi_wallet::service::coin::price_manager::PriceManager;
+use semi_wallet::service::coin::price_storage::PriceStorage;
 use semi_wallet::telemetry::{get_subscriber, init_subscriber};
 use std::process;
 
@@ -53,6 +56,11 @@ async fn main() {
     };
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
+
+    let redis_client = redis::new_redis_client(cfg.redis.clone())
+        .await
+        .expect("cannot create redis client");
+
     let blockchain_service = BlockchainService::new(cfg, http_client);
     let blockchain_service = match blockchain_service {
         Ok(service) => service,
@@ -62,11 +70,15 @@ async fn main() {
         }
     };
 
+    let price_storage = PriceStorage::new(redis_client);
+    let price_manager = PriceManager::new(price_storage);
+
     let user_coin_service = UserCoinService::new(
         db_pool.clone(),
         repo.clone(),
         coin_service.clone(),
         user_plan_service.clone(),
+        price_manager,
     );
 
     let args = Cli::parse();

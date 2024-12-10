@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::ops::Mul;
+
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
@@ -8,7 +11,8 @@ use crate::repository::{
     db::Repository, models::User, models::UserCoin as UserCoinModel, user_coin::CreateUserCoinArgs,
 };
 
-use crate::service::coin::service::Service as CoinService;
+use crate::service::coin::price_manager::PriceManager;
+use crate::service::coin::service::{Service as CoinService, USDT_SYMBOL};
 use crate::service::user_plan::service::Service as UserPlanService;
 
 use super::error::UserCoinError;
@@ -18,6 +22,7 @@ pub struct Service {
     repo: Repository,
     coin_service: CoinService,
     user_plan_service: UserPlanService,
+    price_manager: PriceManager,
 }
 
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -28,6 +33,7 @@ pub struct UserCoin {
     pub symbol: String,
     pub network: String,
     pub amount: Option<f64>,
+    pub usd_value: Option<f64>,
     pub amount_updated_at: Option<i64>,
     pub created_at: i64,
 }
@@ -47,12 +53,14 @@ impl Service {
         repo: Repository,
         coin_service: CoinService,
         user_plan_service: UserPlanService,
+        price_manager: PriceManager,
     ) -> Self {
         Service {
             db,
             repo,
             coin_service,
             user_plan_service,
+            price_manager,
         }
     }
 
@@ -68,24 +76,53 @@ impl Service {
                     source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                 }
             })?;
+
+        let mut symbols: Vec<&str> = res.iter().map(|c| c.symbol.as_str()).collect();
+        symbols.dedup();
+
+        let prices_res = self.price_manager.get_prices_for_coins(symbols).await;
+        let prices = match prices_res {
+            Ok(prices) => prices,
+            Err(e) => {
+                //here we only log error, we don't return error to user, because it is not that critical
+                tracing::error!("cannot get_prices_for_coins due to err: {}", e);
+                HashMap::new()
+            }
+        };
         let user_coins = res
-            .into_iter()
+            .iter()
             .map(|uc| {
                 let mut amount = None;
-                if let Some(bd) = uc.amount {
+                let mut usd_value = None;
+                if let Some(bd) = uc.amount.clone() {
                     amount = bd.to_f64();
+                    usd_value = if uc.symbol != USDT_SYMBOL {
+                        prices.get(uc.symbol.as_str()).map(|pd| {
+                            let price_big_decimal = BigDecimal::from_f64(pd.price).unwrap();
+                            let amount_big_decimal = BigDecimal::from_f64(amount.unwrap()).unwrap();
+                            let val = price_big_decimal.mul(amount_big_decimal).round(0);
+                            val.to_f64().unwrap()
+                        })
+                    } else {
+                        amount
+                    };
                 }
                 let mut amount_updated_at = None;
                 if let Some(updated_at) = uc.amount_updated_at {
                     amount_updated_at = Some(updated_at.timestamp());
                 }
+                //TODO: we should change this 8 to decimals exists in coins table
+                amount =
+                    amount.map(|a| BigDecimal::from_f64(a).unwrap().round(8).to_f64().unwrap());
+
                 UserCoin {
                     id: uc.id,
                     coin_id: uc.coin_id,
-                    address: uc.address,
-                    symbol: uc.symbol,
-                    network: uc.network,
+                    address: uc.address.clone(),
+                    symbol: uc.symbol.clone(),
+                    network: uc.network.clone(),
                     amount,
+                    usd_value,
                     amount_updated_at,
                     created_at: uc.created_at.timestamp(),
                 }
@@ -169,6 +206,7 @@ impl Service {
             symbol: coin.symbol,
             network: coin.network,
             amount: None,
+            usd_value: None,
             amount_updated_at: None,
             created_at: chrono::Utc::now().timestamp(),
         })

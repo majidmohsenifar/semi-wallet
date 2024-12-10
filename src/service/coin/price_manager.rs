@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::config;
 use crate::repository::models::Coin;
 use crate::service::coin::price_storage::PriceData;
@@ -27,42 +29,36 @@ enum PriceProvider {
 
 pub struct PriceManager {
     price_storage: PriceStorage,
-    price_provider: PriceProvider,
 }
 
 impl PriceManager {
-    pub fn new(
-        price_storage: PriceStorage,
+    pub fn new(price_storage: PriceStorage) -> Self {
+        Self { price_storage }
+    }
+
+    pub async fn run_update_prices(
+        &self,
         price_provider_name: &str,
-        binance_cfg: config::BinanceConfig,
         coins: Vec<Coin>,
-    ) -> Result<Self, CoinError> {
-        let provider = Provider::from(price_provider_name)?;
+        binance_cfg: config::BinanceConfig,
+    ) {
+        let provider = Provider::from(price_provider_name).unwrap();
         let price_provider = match provider {
             Provider::Binance => PriceProvider::Binance(BinancePriceProvider::new(
-                price_storage.clone(),
+                self.price_storage.clone(),
                 coins,
                 binance_cfg.ws_url,
             )),
         };
-        Ok(Self {
-            price_storage,
-            price_provider,
-        })
-    }
-
-    pub async fn run_update_prices(&self) {
-        match &self.price_provider {
+        match &price_provider {
             PriceProvider::Binance(provider) => provider.run_update_prices().await,
         }
     }
 
-    pub async fn get_prices_for_coins(
+    pub async fn get_prices_for_coins<'a>(
         &self,
-        coins: Vec<Coin>,
-    ) -> Result<Vec<PriceData>, CoinError> {
-        //let symbols: Vec<&str> = coins.iter().map(|c| c.symbol.as_str()).collect();
-        let symbols: Vec<&str> = coins.iter().map(|c| c.symbol.as_str()).collect();
+        symbols: Vec<&'a str>,
+    ) -> Result<HashMap<&'a str, PriceData>, CoinError> {
         let result = self
             .price_storage
             .get_prices_for_symbols(symbols)

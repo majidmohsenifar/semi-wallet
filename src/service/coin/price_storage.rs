@@ -1,35 +1,13 @@
-use redis::{self, AsyncCommands, FromRedisValue, RedisError};
+use std::collections::HashMap;
+
+use redis::{self, AsyncCommands, RedisError};
 use serde::{Deserialize, Serialize};
 
-pub const COIN_REDIS_KEY_PREFIX: &str = "coin:";
+pub const COIN_PRICE_REDIS_KEY_PREFIX: &str = "coin-price:";
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceData {
     pub price: f64,
-}
-
-impl FromRedisValue for PriceData {
-    fn from_byte_vec(vec: &[u8]) -> Option<Vec<Self>> {
-        let val = serde_json::from_slice(vec).ok()?;
-        Some(vec![val])
-    }
-
-    fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
-        match v {
-            redis::Value::SimpleString(s) => {
-                let res = serde_json::from_str(s.as_str())?;
-                Ok(res)
-            }
-            redis::Value::BulkString(bytes) => {
-                let res = serde_json::from_slice(bytes)?;
-                Ok(res)
-            }
-            _ => Err(redis::RedisError::from((
-                redis::ErrorKind::TypeError,
-                "Invalid type",
-            ))),
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -48,7 +26,7 @@ impl PriceStorage {
             .get_multiplexed_async_connection()
             .await
             .unwrap();
-        let key = format!("{}{}", COIN_REDIS_KEY_PREFIX, symbol);
+        let key = format!("{}{}", COIN_PRICE_REDIS_KEY_PREFIX, symbol);
         let val = PriceData { price };
         //TODO: handle this unwrap later
         let p = serde_json::to_string(&val).unwrap();
@@ -56,20 +34,49 @@ impl PriceStorage {
         Ok(())
     }
 
-    pub async fn get_prices_for_symbols(
+    pub async fn get_prices_for_symbols<'a>(
         &self,
-        symbols: Vec<&str>,
-    ) -> Result<Vec<PriceData>, RedisError> {
+        symbols: Vec<&'a str>,
+    ) -> Result<HashMap<&'a str, PriceData>, RedisError> {
         let mut conn = self
             .redis_client
             .get_multiplexed_async_connection()
             .await
             .unwrap();
-        let result: Vec<PriceData> = redis::pipe()
+        let keys: Vec<String> = symbols
+            .iter()
+            .map(|&s| format!("{}{}", COIN_PRICE_REDIS_KEY_PREFIX, s))
+            .collect();
+
+        let result: redis::Value = redis::pipe()
             .atomic()
-            .mget(symbols)
+            .mget(&keys)
             .query_async(&mut conn)
             .await?;
-        Ok(result)
+
+        let prices_data = if let redis::Value::Array(values) = result {
+            //the values is array containing 1 array, we are kinda flatten it
+            if !values.is_empty() {
+                let values = values[0].clone();
+                match values {
+                    redis::Value::Array(vals) => vals
+                        .into_iter()
+                        .map(|v| match v {
+                            redis::Value::BulkString(d) => {
+                                serde_json::from_slice::<PriceData>(&d).unwrap()
+                            }
+                            _ => PriceData { price: 0.0 },
+                        })
+                        .collect(),
+                    _ => vec![PriceData { price: 0.0 }; keys.len()],
+                }
+            } else {
+                vec![PriceData { price: 0.0 }; keys.len()]
+            }
+        } else {
+            vec![PriceData { price: 0.0 }; keys.len()]
+        };
+        let prices: HashMap<&str, PriceData> = symbols.into_iter().zip(prices_data).collect();
+        Ok(prices)
     }
 }

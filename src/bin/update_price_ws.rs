@@ -44,18 +44,14 @@ async fn main() {
         panic!("coins is empty");
     }
 
-    let redis_client = redis::new_redis_client(&cfg.redis.uri)
+    let redis_client = redis::new_redis_client(cfg.redis)
         .await
         .expect("cannot create redis client");
     let price_storage = PriceStorage::new(redis_client);
 
-    let price_manager = PriceManager::new(
-        price_storage,
-        PRICE_PROVIDER_BINANCE,
-        cfg.binance.clone(),
-        coins,
-    )
-    .expect("cannot create price manager");
+    let price_manager = PriceManager::new(price_storage);
 
-    price_manager.run_update_prices().await;
+    price_manager
+        .run_update_prices(PRICE_PROVIDER_BINANCE, coins, cfg.binance.clone())
+        .await;
 }

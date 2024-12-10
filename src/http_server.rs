@@ -1,4 +1,4 @@
-use crate::{config::Settings, handler::{self,api::middleware}, AppState, SharedState};
+use crate::{config::Settings, handler::{self,api::middleware}, AppState, SharedState, service::coin::{price_manager::PriceManager, price_storage::PriceStorage}};
 
 use axum::{
     middleware as axum_middleware,
@@ -11,6 +11,7 @@ use tokio::{io, net::TcpListener, sync::RwLock};
 use tower_http::cors::{CorsLayer,Any};
 
 use crate::client::postgres;
+use crate::client::redis;
 use crate::repository::db::Repository;
 use crate::service::auth::service::Service as AuthService;
 use crate::service::coin::service::Service as CoinService;
@@ -133,8 +134,11 @@ impl HttpServer {
             cfg.stripe.secret,
         );
         let auth_service = AuthService::new(db_pool.clone(), user_service, cfg.jwt.secret);
+        let redis_client = redis::new_redis_client(cfg.redis).await.expect("cannot create redis client");
+        let price_storage=PriceStorage::new(redis_client);
+        let price_manager=PriceManager::new(price_storage);
         let user_coin_service =
-            UserCoinService::new(db_pool.clone(), repo.clone(), coin_service.clone(),user_plan_service.clone());
+            UserCoinService::new(db_pool.clone(), repo.clone(), coin_service.clone(),user_plan_service.clone(),price_manager);
 
         let app_state = AppState {
             order_service,

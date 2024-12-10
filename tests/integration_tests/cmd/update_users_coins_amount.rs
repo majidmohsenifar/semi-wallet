@@ -5,8 +5,10 @@ use bigdecimal::ToPrimitive;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use chrono::Duration;
 use claims::{assert_gt, assert_none};
+use semi_wallet::service::coin::price_manager::PriceManager;
+use semi_wallet::service::coin::price_storage::PriceStorage;
 use semi_wallet::{
-    client::postgres,
+    client::{postgres, redis},
     handler::cmd::update_users_coins_amount::{UpdateUserCoinsAmountArgs, UpdateUserCoinsCommand},
     repository::{
         db::Repository, models::OrderStatus, order::CreateOrderArgs,
@@ -247,15 +249,22 @@ async fn update_users_coins_amount_without_args() {
     let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn)
         .await
         .expect("cannot create db_pool");
+
+    let redis_client = redis::new_redis_client(app.cfg.redis.clone())
+        .await
+        .expect("cannot create redis client");
     let http_client = reqwest::Client::builder().build().unwrap();
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
     let blockchain_service = BlockchainService::new(app.cfg, http_client).unwrap();
+    let price_storage = PriceStorage::new(redis_client);
+    let price_manager = PriceManager::new(price_storage);
     let user_coin_service = UserCoinService::new(
         db_pool.clone(),
         repo.clone(),
         coin_service.clone(),
         user_plan_service.clone(),
+        price_manager,
     );
 
     let cmd = UpdateUserCoinsCommand::new(
@@ -584,15 +593,21 @@ async fn update_users_coins_amount_with_user_id_args() {
     let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn)
         .await
         .expect("cannot create db_pool");
+    let redis_client = redis::new_redis_client(app.cfg.redis.clone())
+        .await
+        .expect("cannot create redis client");
     let http_client = reqwest::Client::builder().build().unwrap();
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
     let blockchain_service = BlockchainService::new(app.cfg, http_client).unwrap();
+    let price_storage = PriceStorage::new(redis_client);
+    let price_manager = PriceManager::new(price_storage);
     let user_coin_service = UserCoinService::new(
         db_pool.clone(),
         repo.clone(),
         coin_service.clone(),
         user_plan_service.clone(),
+        price_manager,
     );
 
     let cmd = UpdateUserCoinsCommand::new(
@@ -796,15 +811,21 @@ async fn update_users_coins_amount_with_symbol_args() {
     let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn)
         .await
         .expect("cannot create db_pool");
+    let redis_client = redis::new_redis_client(app.cfg.redis.clone())
+        .await
+        .expect("cannot create redis_client");
     let http_client = reqwest::Client::builder().build().unwrap();
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
     let blockchain_service = BlockchainService::new(app.cfg, http_client).unwrap();
+    let price_storage = PriceStorage::new(redis_client);
+    let price_manager = PriceManager::new(price_storage);
     let user_coin_service = UserCoinService::new(
         db_pool.clone(),
         repo.clone(),
         coin_service.clone(),
         user_plan_service.clone(),
+        price_manager,
     );
 
     let cmd = UpdateUserCoinsCommand::new(
@@ -1020,15 +1041,21 @@ async fn update_users_coins_amount_with_symbol_and_network_args() {
     let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn)
         .await
         .expect("cannot create db_pool");
+    let redis_client = redis::new_redis_client(app.cfg.redis.clone())
+        .await
+        .expect("cannot create redis client");
     let http_client = reqwest::Client::builder().build().unwrap();
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
     let blockchain_service = BlockchainService::new(app.cfg, http_client).unwrap();
+    let price_storage = PriceStorage::new(redis_client);
+    let price_manager = PriceManager::new(price_storage);
     let user_coin_service = UserCoinService::new(
         db_pool.clone(),
         repo.clone(),
         coin_service.clone(),
         user_plan_service.clone(),
+        price_manager,
     );
 
     let cmd = UpdateUserCoinsCommand::new(
@@ -1228,15 +1255,21 @@ async fn update_users_coins_amount_with_user_id_and_symbol_and_network_args() {
     let db_pool = postgres::new_pg_pool(&app.cfg.db.dsn)
         .await
         .expect("cannot create db_pool");
+    let redis_client = redis::new_redis_client(app.cfg.redis.clone())
+        .await
+        .expect("cannot create redis_client");
     let http_client = reqwest::Client::builder().build().unwrap();
     let coin_service = CoinService::new(db_pool.clone(), repo.clone());
     let user_plan_service = UserPlanService::new(db_pool.clone(), repo.clone());
     let blockchain_service = BlockchainService::new(app.cfg, http_client).unwrap();
+    let price_storage = PriceStorage::new(redis_client);
+    let price_manager = PriceManager::new(price_storage);
     let user_coin_service = UserCoinService::new(
         db_pool.clone(),
         repo.clone(),
         coin_service.clone(),
         user_plan_service.clone(),
+        price_manager,
     );
 
     let cmd = UpdateUserCoinsCommand::new(

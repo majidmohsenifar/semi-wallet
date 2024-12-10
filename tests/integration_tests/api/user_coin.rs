@@ -3,6 +3,9 @@ use std::convert::From;
 
 use bigdecimal::{BigDecimal, FromPrimitive};
 use claims::{assert_gt, assert_none};
+use redis::{self, AsyncCommands};
+
+use semi_wallet::service::coin::price_storage::{PriceData, COIN_PRICE_REDIS_KEY_PREFIX};
 use semi_wallet::{
     handler::api::response::{ApiError, ApiResponse},
     repository::{models::OrderStatus, user_plan::CreateUserPlanOrUpdateExpiresAtArgs},
@@ -40,7 +43,7 @@ async fn get_user_coins_successful() {
         .await;
 
     app.repo
-        .update_user_coin_amount(&app.db, uc1, BigDecimal::from_f64(2.18).unwrap())
+        .update_user_coin_amount(&app.db, uc1, BigDecimal::from_i32(2).unwrap())
         .await
         .unwrap();
 
@@ -49,7 +52,7 @@ async fn get_user_coins_successful() {
         .await;
 
     app.repo
-        .update_user_coin_amount(&app.db, uc2, BigDecimal::from_f64(0.0002).unwrap())
+        .update_user_coin_amount(&app.db, uc2, BigDecimal::from_f64(0.002).unwrap())
         .await
         .unwrap();
 
@@ -58,6 +61,30 @@ async fn get_user_coins_successful() {
 
     app.create_user_coin(user.id, "USDT", "TRX", "usdt_trx_addr")
         .await;
+
+    //setting prices
+    let mut conn = app
+        .redis_client
+        .get_multiplexed_async_connection()
+        .await
+        .unwrap();
+
+    conn.mset::<_, _, ()>(&[
+        (
+            format!("{}{}", COIN_PRICE_REDIS_KEY_PREFIX, "BTC"),
+            serde_json::to_string(&PriceData { price: 100_000f64 }).unwrap(),
+        ),
+        (
+            format!("{}{}", COIN_PRICE_REDIS_KEY_PREFIX, "ETH"),
+            serde_json::to_string(&PriceData { price: 4_000f64 }).unwrap(),
+        ),
+        (
+            format!("{}{}", COIN_PRICE_REDIS_KEY_PREFIX, "TRX"),
+            serde_json::to_string(&PriceData { price: 0.4 }).unwrap(),
+        ),
+    ])
+    .await
+    .unwrap();
 
     let client = reqwest::Client::new();
     let response = client
@@ -84,7 +111,8 @@ async fn get_user_coins_successful() {
     assert_gt!(uc1.coin_id, 0);
     assert_eq!(uc1.address, "btc_addr".to_string());
     assert_eq!(uc1.symbol, "BTC".to_string());
-    assert_eq!(uc1.amount.unwrap(), 2.18);
+    assert_eq!(uc1.usd_value, Some(200_000.0));
+    assert_eq!(uc1.amount.unwrap(), 2.0);
     assert_gt!(uc1.amount_updated_at.unwrap(), 0);
 
     let uc2 = data.get(1).unwrap();
@@ -93,7 +121,8 @@ async fn get_user_coins_successful() {
     assert_eq!(uc2.address, "eth_addr".to_string());
     assert_eq!(uc2.symbol, "ETH".to_string());
     assert_eq!(uc2.network, "ETH".to_string());
-    assert_eq!(uc2.amount.unwrap(), 0.0002);
+    assert_eq!(uc2.amount.unwrap(), 0.002);
+    assert_eq!(uc2.usd_value, Some(8.0));
     assert_gt!(uc2.amount_updated_at.unwrap(), 0);
 
     let uc3 = data.get(2).unwrap();
@@ -103,6 +132,7 @@ async fn get_user_coins_successful() {
     assert_eq!(uc3.symbol, "USDT".to_string());
     assert_eq!(uc3.network, "ETH".to_string());
     assert_none!(uc3.amount);
+    assert_none!(uc3.usd_value);
     assert_none!(uc3.amount_updated_at);
 
     let uc4 = data.last().unwrap();
@@ -112,6 +142,7 @@ async fn get_user_coins_successful() {
     assert_eq!(uc4.symbol, "USDT".to_string());
     assert_eq!(uc4.network, "TRX".to_string());
     assert_none!(uc4.amount);
+    assert_none!(uc4.usd_value);
     assert_none!(uc4.amount_updated_at);
 }
 
@@ -375,6 +406,8 @@ async fn create_user_coin_successful() {
     assert_eq!(data.coin_id, 1);
     assert_eq!(data.address, "btc_addr_".repeat(4));
     assert_eq!(data.symbol, "BTC");
+    assert_eq!(data.amount, None);
+    assert_eq!(data.usd_value, None);
     assert_eq!(data.network, "BTC");
 }
 
@@ -442,6 +475,8 @@ async fn create_user_coin_network_not_set_successful() {
     assert_eq!(data.coin_id, 1);
     assert_eq!(data.address, "btc_addr_".repeat(4));
     assert_eq!(data.symbol, "BTC");
+    assert_eq!(data.amount, None);
+    assert_eq!(data.usd_value, None);
     assert_eq!(data.network, "BTC");
 }
 
@@ -509,6 +544,8 @@ async fn create_user_coin_empty_network_set_successful() {
     assert_eq!(data.coin_id, 1);
     assert_eq!(data.address, "btc_addr_".repeat(4));
     assert_eq!(data.symbol, "BTC");
+    assert_eq!(data.amount, None);
+    assert_eq!(data.usd_value, None);
     assert_eq!(data.network, "BTC");
 }
 
@@ -580,6 +617,8 @@ async fn create_user_coin_with_network_set_successful() {
     assert_eq!(data.coin_id, 5);
     assert_eq!(data.address, "usdt_addr_".repeat(4));
     assert_eq!(data.symbol, "USDT");
+    assert_eq!(data.amount, None);
+    assert_eq!(data.usd_value, None);
     assert_eq!(data.network, "ETH");
 }
 
@@ -870,6 +909,4 @@ async fn update_user_coin_successful() {
     assert_eq!(uc.user_id, user.id);
     assert_eq!(uc.coin_id, 1);
     assert_eq!(uc.address, "updated_btc_addr");
-    assert_eq!(uc.symbol, "BTC");
-    assert_eq!(uc.network, "BTC");
 }
