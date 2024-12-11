@@ -862,6 +862,7 @@ async fn stripe_webhook_completed_already_has_old_expired_1_month_user_plan_buys
     ))
     .and(method("GET"))
     .respond_with(ResponseTemplate::new(200).set_body_json(&checkout_session))
+    .expect(1)
     .mount(&app.stripe_server)
     .await;
 
@@ -911,4 +912,6 @@ async fn stripe_webhook_completed_already_has_old_expired_1_month_user_plan_buys
     assert_eq!(user_plan.last_order_id, o.id);
 
     assert_gt!((user_plan.expires_at - chrono::Utc::now()).num_days(), 89);
+
+    app.stripe_server.verify().await;
 }

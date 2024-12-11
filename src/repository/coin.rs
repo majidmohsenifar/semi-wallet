@@ -72,10 +72,11 @@ impl Repository {
         &self,
         db: &Pool<Postgres>,
     ) -> Result<Vec<Coin>, sqlx::Error> {
-        let coins =
-            sqlx::query_as::<_, Coin>("SELECT * FROM coins WHERE price_pair_symbol IS NOT NULL")
-                .fetch_all(db)
-                .await?;
+        let coins = sqlx::query_as::<_, Coin>(
+            "SELECT * FROM coins WHERE price_pair_symbol IS NOT NULL ORDER BY id ASC",
+        )
+        .fetch_all(db)
+        .await?;
         Ok(coins)
     }
 }

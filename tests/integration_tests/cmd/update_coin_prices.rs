@@ -6,7 +6,7 @@ use semi_wallet::service::coin::{
 use serde_json::json;
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::Message;
-use ws_mock::ws_mock_server::WsMock;
+use ws_mock::{matchers::StringExact, ws_mock_server::WsMock};
 
 use crate::helpers::spawn_app;
 
@@ -25,35 +25,14 @@ async fn update_coin_prices_using_binance_ws() {
 
     //running binance ws server
     let (mpsc_send, mpsc_recv) = mpsc::channel::<Message>(32);
-    //let params: Vec<String> = coins
-    //.iter()
-    //.map(|c| {
-    //let param = c
-    //.price_pair_symbol
-    //.as_ref()
-    //.unwrap()
-    //.as_str()
-    //.replace('-', "")
-    //.to_lowercase();
-    //format!("{}@avgPrice", param)
-    //})
-    //.collect();
-
-    //let subscribe_request = SubscribeRequest {
-    //id: 1,
-    //method: "SUBSCRIBE",
-    //params,
-    //};
-    //let expected_msg = serde_json::to_value(&subscribe_request).unwrap();
-
-    //let subscribe_res = json!({
-    //"result": null,
-    //"id": 1
-    //});
+    let subscribe_res = json!({
+    "result": null,
+    "id": 1
+    });
     WsMock::new()
-        //.matcher(JsonExact::new(expected_msg))
-        //.respond_with(Message::Text(subscribe_res.to_string()))
-        //.expect(1)
+        .matcher(StringExact::new(r#"{"id":1,"method":"SUBSCRIBE","params":["btcusdt@avgPrice","ethusdt@avgPrice","solusdt@avgPrice","trxusdt@avgPrice"]}"#))
+        .respond_with(Message::Text(subscribe_res.to_string()))
+        .expect(1)
         .forward_from_channel(mpsc_recv)
         .mount(&app.binance_ws_server)
         .await;
@@ -136,4 +115,6 @@ async fn update_coin_prices_using_binance_ws() {
     assert_eq!(sol_price_data.price, 250f64);
     let trx_price_data = prices.get("TRX").unwrap();
     assert_eq!(trx_price_data.price, 0.4);
+
+    app.binance_ws_server.verify().await;
 }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::repository::models::Coin;
 
@@ -10,7 +10,7 @@ use tokio_tungstenite::tungstenite::Message;
 
 pub struct BinancePriceProvider<'a> {
     price_storage: PriceStorage,
-    binance_pair_coin_symbol_map: HashMap<String, &'a str>,
+    binance_pair_coin_symbol_map: BTreeMap<String, &'a str>,
     ws_url: String,
 }
 
@@ -39,7 +39,7 @@ pub struct AvgPriceEvent {
 
 impl<'a> BinancePriceProvider<'a> {
     pub fn new(price_storage: PriceStorage, coins: &'a [Coin], ws_url: String) -> Self {
-        let map: HashMap<String, &str> = coins
+        let map: BTreeMap<String, &str> = coins
             .iter()
             .map(|c| {
                 {
@@ -65,9 +65,7 @@ impl<'a> BinancePriceProvider<'a> {
     pub async fn run_update_prices(&self) {
         let (ws_stream, _) = connect_async(&self.ws_url).await.unwrap();
         let (mut writer, mut reader) = ws_stream.split();
-        //maybe avgPrice is better, see the link https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams#average-price
-        //let params = Vec::from(["btcusdt@avgPrice"]);
-        //TODO: is using two iterator here necessary?
+
         let params: Vec<String> = self
             .binance_pair_coin_symbol_map
             .keys()
@@ -81,6 +79,9 @@ impl<'a> BinancePriceProvider<'a> {
         };
         let subscribe_msg = serde_json::to_string(&subscribe_request).unwrap();
         writer.send(Message::from(subscribe_msg)).await.unwrap();
+
+        //we ignore the first message which is response to the subscribe request
+        reader.try_next().await.unwrap();
 
         while let Some(message) = reader.try_next().await.unwrap() {
             if let Message::Text(text) = &message {
