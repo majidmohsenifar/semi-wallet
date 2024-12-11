@@ -114,6 +114,7 @@ async fn stripe_webhook_still_created_first_time() {
     ))
     .and(method("GET"))
     .respond_with(ResponseTemplate::new(200).set_body_json(&checkout_session))
+    .expect(1)
     .mount(&app.stripe_server)
     .await;
 
@@ -157,6 +158,8 @@ async fn stripe_webhook_still_created_first_time() {
         Err(sqlx::Error::RowNotFound) => (),
         Err(err) => panic!("error must be sqlx::Error::RowNotFound,but it was {}", err),
     }
+
+    app.stripe_server.verify().await;
 }
 
 #[tokio::test]
@@ -242,6 +245,7 @@ async fn stripe_webhook_expired() {
     ))
     .and(method("GET"))
     .respond_with(ResponseTemplate::new(200).set_body_json(checkout_session))
+    .expect(1)
     .mount(&app.stripe_server)
     .await;
 
@@ -284,6 +288,8 @@ async fn stripe_webhook_expired() {
         Err(sqlx::Error::RowNotFound) => (),
         Err(err) => panic!("error must be sqlx::Error::RowNotFound,but it was {}", err),
     }
+
+    app.stripe_server.verify().await;
 }
 
 #[tokio::test]
@@ -369,6 +375,7 @@ async fn stripe_webhook_completed_first_time() {
     ))
     .and(method("GET"))
     .respond_with(ResponseTemplate::new(200).set_body_json(&checkout_session))
+    .expect(1)
     .mount(&app.stripe_server)
     .await;
 
@@ -417,6 +424,8 @@ async fn stripe_webhook_completed_first_time() {
     assert_eq!(user_plan.last_plan_id, plan.id);
     assert_eq!(user_plan.last_order_id, o.id);
     assert_gt!((user_plan.expires_at - chrono::Utc::now()).num_days(), 29);
+
+    app.stripe_server.verify().await;
 }
 
 #[tokio::test]
@@ -529,6 +538,7 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan() {
     ))
     .and(method("GET"))
     .respond_with(ResponseTemplate::new(200).set_body_json(&checkout_session))
+    .expect(1)
     .mount(&app.stripe_server)
     .await;
 
@@ -577,6 +587,8 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan() {
     assert_eq!(user_plan.last_plan_id, plan.id);
     assert_eq!(user_plan.last_order_id, o.id);
     assert_gt!((user_plan.expires_at - chrono::Utc::now()).num_days(), 59);
+
+    app.stripe_server.verify().await;
 }
 
 #[tokio::test]
@@ -695,6 +707,7 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan_buys
     ))
     .and(method("GET"))
     .respond_with(ResponseTemplate::new(200).set_body_json(&checkout_session))
+    .expect(1)
     .mount(&app.stripe_server)
     .await;
 
@@ -742,8 +755,9 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan_buys
     assert_eq!(user_plan.user_id, user.id);
     assert_eq!(user_plan.last_plan_id, plan_3month.id);
     assert_eq!(user_plan.last_order_id, o.id);
-
     assert_gt!((user_plan.expires_at - chrono::Utc::now()).num_days(), 119);
+
+    app.stripe_server.verify().await;
 }
 
 #[tokio::test]

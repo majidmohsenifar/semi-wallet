@@ -99,6 +99,7 @@ async fn update_users_coins_amount_without_args() {
                 balance: "120000000".to_string(),
             }),
         )
+        .expect(1)
         .mount(app.nodes.get("BTC").unwrap())
         .await;
 
@@ -148,6 +149,7 @@ async fn update_users_coins_amount_without_args() {
                 })
             }
         })
+        .expect(2)
         .mount(app.nodes.get("ETH").unwrap())
         .await;
 
@@ -175,6 +177,7 @@ async fn update_users_coins_amount_without_args() {
                 "id": 1
             })
         }))
+        .expect(1)
         .mount(app.nodes.get("SOL").unwrap())
         .await;
 
@@ -195,6 +198,7 @@ async fn update_users_coins_amount_without_args() {
          "address": tron_addr,
         "balance": 2_000_000,
         })))
+        .expect(1)
         .mount(app.nodes.get("TRX").unwrap())
         .await;
 
@@ -235,6 +239,7 @@ async fn update_users_coins_amount_without_args() {
                 constant_result: vec!["2000000000".to_string()],
             })
         })
+        .expect(1)
         .mount(app.nodes.get("TRX").unwrap())
         .await;
 
@@ -349,6 +354,11 @@ async fn update_users_coins_amount_without_args() {
             panic!("user coin amount should be none");
         }
     }
+
+    app.nodes.get("BTC").unwrap().verify().await;
+    app.nodes.get("ETH").unwrap().verify().await;
+    app.nodes.get("SOL").unwrap().verify().await;
+    app.nodes.get("TRX").unwrap().verify().await;
 }
 
 //we have 2 users, we set args user_id to be user1
@@ -416,6 +426,7 @@ async fn update_users_coins_amount_with_user_id_args() {
                 balance: "120000000".to_string(),
             }),
         )
+        .expect(1)
         .mount(app.nodes.get("BTC").unwrap())
         .await;
 
@@ -465,6 +476,7 @@ async fn update_users_coins_amount_with_user_id_args() {
                 })
             }
         })
+        .expect(2)
         .mount(app.nodes.get("ETH").unwrap())
         .await;
 
@@ -492,6 +504,7 @@ async fn update_users_coins_amount_with_user_id_args() {
                 "id": 1
             })
         }))
+        .expect(1)
         .mount(app.nodes.get("SOL").unwrap())
         .await;
 
@@ -512,6 +525,7 @@ async fn update_users_coins_amount_with_user_id_args() {
          "address": tron_addr,
         "balance": 2_000_000,
         })))
+        .expect(1)
         .mount(app.nodes.get("TRX").unwrap())
         .await;
 
@@ -552,6 +566,7 @@ async fn update_users_coins_amount_with_user_id_args() {
                 constant_result: vec!["2000000000".to_string()],
             })
         })
+        .expect(1)
         .mount(app.nodes.get("TRX").unwrap())
         .await;
 
@@ -693,6 +708,11 @@ async fn update_users_coins_amount_with_user_id_args() {
             panic!("user coin amount should be none");
         }
     }
+
+    app.nodes.get("BTC").unwrap().verify().await;
+    app.nodes.get("ETH").unwrap().verify().await;
+    app.nodes.get("SOL").unwrap().verify().await;
+    app.nodes.get("TRX").unwrap().verify().await;
 }
 
 //we have 2 users with many coins, we set args symbol to be ETH only
@@ -760,6 +780,7 @@ async fn update_users_coins_amount_with_symbol_args() {
                 balance: "120000000".to_string(),
             }),
         )
+        .expect(1)
         .mount(app.nodes.get("BTC").unwrap())
         .await;
 
@@ -770,6 +791,7 @@ async fn update_users_coins_amount_with_symbol_args() {
                 balance: "210000000".to_string(),
             }),
         )
+        .expect(1)
         .mount(app.nodes.get("BTC").unwrap())
         .await;
 
@@ -884,6 +906,8 @@ async fn update_users_coins_amount_with_symbol_args() {
             }
         }
     }
+
+    app.nodes.get("BTC").unwrap().verify().await;
 }
 
 //we have 2 users with many coins, we set args symbol to be USDT and network to be ETH
@@ -998,6 +1022,7 @@ async fn update_users_coins_amount_with_symbol_and_network_args() {
                 json!({"id":1, "jsonrpc":"2.0", "result":result}) //2000 $
             })
         })
+        .expect(2)
         .mount(app.nodes.get("ETH").unwrap())
         .await;
 
@@ -1114,6 +1139,8 @@ async fn update_users_coins_amount_with_symbol_and_network_args() {
             }
         }
     }
+
+    app.nodes.get("ETH").unwrap().verify().await;
 }
 
 //we have 2 users with many coins, we set args user_id to be user1,symbol to be USDT and network to be ETH
@@ -1214,6 +1241,7 @@ async fn update_users_coins_amount_with_user_id_and_symbol_and_network_args() {
                 })
             }
         })
+        .expect(1)
         .mount(app.nodes.get("ETH").unwrap())
         .await;
 
@@ -1320,4 +1348,6 @@ async fn update_users_coins_amount_with_user_id_and_symbol_and_network_args() {
             panic!("user coin amount should be none");
         }
     }
+
+    app.nodes.get("ETH").unwrap().verify().await;
 }

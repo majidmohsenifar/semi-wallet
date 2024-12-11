@@ -119,6 +119,7 @@ async fn create_order_1_month_stripe_successful() {
     Mock::given(path("/v1/checkout/sessions"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200).set_body_json(&checkout_session))
+        .expect(1)
         .mount(&app.stripe_server)
         .await;
 
@@ -157,6 +158,8 @@ async fn create_order_1_month_stripe_successful() {
     assert_eq!(payment.amount, order.total);
     assert_eq!(payment.payment_provider_code, PAYMENT_PROVIDER_STRIPE);
     assert_ne!(payment.external_id, None);
+
+    app.stripe_server.verify().await;
 }
 
 #[tokio::test]
