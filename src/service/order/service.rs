@@ -200,8 +200,6 @@ impl Service {
         let payment = payment.unwrap();
         let commit_res = db_tx.commit().await;
         if let Err(e) = commit_res {
-            //TODO: shouldn't we rollback? but how, the commit causes move of db_tx
-            //let _ = db_tx.rollback().await;
             tracing::error!("cannot commit db tx due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot commit changes to db".to_string(),
@@ -494,8 +492,6 @@ impl Service {
 
         let commit_res = db_tx.commit().await;
         if let Err(e) = commit_res {
-            //TODO: shouldn't we rollback? but how, the commit causes move of db_tx
-            //let _ = db_tx.rollback().await;
             tracing::error!("cannot commit db tx due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot commit changes to db".to_string(),
@@ -557,8 +553,6 @@ impl Service {
 
         let commit_res = db_tx.commit().await;
         if let Err(e) = commit_res {
-            //TODO: shouldn't we rollback? but how, the commit causes move of db_tx
-            //let _ = db_tx.rollback().await;
             tracing::error!("cannot commit db tx due to err: {}", e);
             return Err(OrderError::Unexpected {
                 message: "cannot commit changes to db".to_string(),
