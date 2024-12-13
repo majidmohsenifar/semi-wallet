@@ -1,4 +1,4 @@
-#Semi-Wallet
+# Semi-Wallet
 Have you ever done installing a crypto wallet then insert your seed phrase only for knowing how much balance you have? 
 This is a simple project designed to track addresses you are interested in, you can have all your own addresses in one place and check how much you have gained or lose without worrying about
 having your seed phrases always with you. in this project you can register and buy a plan to track your crypto addresses balance and the equivalent USD amount of them.
