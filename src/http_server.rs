@@ -1,4 +1,4 @@
-use crate::{config::Settings, handler::{self,api::middleware}, AppState, SharedState, service::coin::{price_manager::PriceManager, price_storage::PriceStorage}};
+use crate::{config::Settings, handler::{self,api::middleware},  service::coin::{price_manager::PriceManager, price_storage::PriceStorage}};
 
 use axum::{
     middleware as axum_middleware,
@@ -29,6 +29,17 @@ use utoipa::{
     Modify, OpenApi,
 };
 use utoipa_swagger_ui::SwaggerUi;
+
+pub type SharedState = Arc<RwLock<AppState>>;
+
+pub struct AppState {
+    pub order_service: OrderService,
+    pub coin_service: CoinService,
+    pub plan_service: PlanService,
+    pub auth_service: AuthService,
+    pub user_coin_service: UserCoinService,
+    pub payment_service: PaymentService,
+}
 
 pub struct HttpServer {
     router: Router,

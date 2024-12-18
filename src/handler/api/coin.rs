@@ -1,6 +1,6 @@
 use axum::{extract::State, response::IntoResponse};
 
-use crate::SharedState;
+use crate::http_server::SharedState;
 
 use super::response;
 

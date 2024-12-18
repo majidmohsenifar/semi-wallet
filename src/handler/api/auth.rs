@@ -5,8 +5,8 @@ use axum::{
 };
 
 use crate::{
+    http_server::SharedState,
     service::auth::service::{LoginParams, RegisterParams},
-    SharedState,
 };
 
 use super::response;

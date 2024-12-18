@@ -8,7 +8,8 @@ use axum::{
 };
 
 use crate::{
-    repository::models::User, service::user_coin::service::CreateUserCoinParams, SharedState,
+    http_server::SharedState, repository::models::User,
+    service::user_coin::service::CreateUserCoinParams,
 };
 use validator::Validate;
 

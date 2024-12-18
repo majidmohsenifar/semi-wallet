@@ -30,7 +30,7 @@ impl PriceStorage {
         let val = PriceData { price };
         //TODO: handle this unwrap later
         let p = serde_json::to_string(&val).unwrap();
-        conn.set(key, p).await?;
+        conn.set::<_, _, ()>(key, p).await?;
         Ok(())
     }
 

@@ -6,9 +6,9 @@ use axum::{
 };
 
 use crate::{
+    http_server::SharedState,
     repository::models::User,
     service::order::service::{CreateOrderParams, GetUserOrdersListParams, OrderDetailParams},
-    SharedState,
 };
 
 use super::response;
