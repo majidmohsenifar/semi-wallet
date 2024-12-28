@@ -175,16 +175,15 @@ impl Service {
                     status: crate::repository::models::PaymentStatus::Created,
                 },
             )
-            .await;
+            .await
+            .map_err(|e| {
+                tracing::error!("cannot create_payment due to err: {}", e);
+                PaymentError::Unexpected {
+                    message: "cannot create payment".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
+            })?;
 
-        if let Err(e) = payment {
-            tracing::error!("cannot create_payment due to err: {}", e);
-            return Err(PaymentError::Unexpected {
-                message: "cannot create payment".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
-        let payment = payment.unwrap();
         let amount = match payment.amount.to_f64() {
             Some(float) => float,
             None => return Err(PaymentError::InvalidAmount),

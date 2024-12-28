@@ -21,11 +21,8 @@ impl PriceStorage {
     }
 
     pub async fn set_price(&self, symbol: &str, price: f64) -> Result<(), RedisError> {
-        let mut conn = self
-            .redis_client
-            .get_multiplexed_async_connection()
-            .await
-            .unwrap();
+        let mut conn = self.redis_client.get_multiplexed_async_connection().await?;
+
         let key = format!("{}{}", COIN_PRICE_REDIS_KEY_PREFIX, symbol);
         let val = PriceData { price };
         //TODO: handle this unwrap later
@@ -38,11 +35,7 @@ impl PriceStorage {
         &self,
         symbols: Vec<&'a str>,
     ) -> Result<HashMap<&'a str, PriceData>, RedisError> {
-        let mut conn = self
-            .redis_client
-            .get_multiplexed_async_connection()
-            .await
-            .unwrap();
+        let mut conn = self.redis_client.get_multiplexed_async_connection().await?;
         let keys: Vec<String> = symbols
             .iter()
             .map(|&s| format!("{}{}", COIN_PRICE_REDIS_KEY_PREFIX, s))

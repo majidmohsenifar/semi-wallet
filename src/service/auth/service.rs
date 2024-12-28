@@ -4,6 +4,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::repository::models::User;
+use crate::service::user::error::UserError;
 use crate::service::user::service::{CreateUserParams, Service as UserService};
 
 use super::{bcrypt, error::AuthError, jwt};
@@ -76,16 +77,14 @@ impl Service {
             Ok(hashed) => hashed,
         };
 
-        let conn = self.db.acquire().await;
-        if let Err(e) = conn {
+        let mut conn = self.db.acquire().await.map_err(|e| {
             tracing::error!("cannot acquire db conn due to err: {}", e);
-            return Err(AuthError::Unexpected {
+            AuthError::Unexpected {
                 message: "cannot acquire db conn ".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
-        let mut conn = conn.unwrap();
-        let u = self
+            }
+        })?;
+        let create_user_res = self
             .user_service
             .create_user(
                 &mut conn,
@@ -95,12 +94,15 @@ impl Service {
                 },
             )
             .await;
-        if let Err(e) = u {
-            tracing::error!("cannot create_user due to err: {}", e);
-            return Err(AuthError::Unexpected {
-                message: "cannot insert to db".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
+        match create_user_res {
+            Ok(_) => {}
+            Err(UserError::Unexpected { source, .. }) => {
+                tracing::error!("cannot create_user due to err: {}", source);
+                return Err(AuthError::Unexpected {
+                    message: "cannot insert to db".to_string(),
+                    source,
+                });
+            }
         }
         Ok(RegisterResult {})
     }

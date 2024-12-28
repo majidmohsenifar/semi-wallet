@@ -124,36 +124,31 @@ impl Service {
             Some(pp) => pp,
             None => return Err(OrderError::InvalidPaymentProvider),
         };
-        let plan = self.plan_service.get_plan_by_code(&params.plan_code).await;
-        if let Err(e) = plan {
-            match e {
-                sqlx::Error::RowNotFound => {
-                    return Err(OrderError::PlanNotFound {
+        let plan = self
+            .plan_service
+            .get_plan_by_code(&params.plan_code)
+            .await
+            .map_err(|e| {
+                if let sqlx::Error::RowNotFound = e {
+                    return OrderError::PlanNotFound {
                         code: params.plan_code,
-                    });
+                    };
                 }
-                _ => {
-                    tracing::error!("cannot get plan by code due to err: {}", e);
-                    return Err(OrderError::Unexpected {
-                        message: "cannot get plan".to_string(),
-                        source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-                    });
+                tracing::error!("cannot get plan by code due to err: {}", e);
+                OrderError::Unexpected {
+                    message: "cannot get plan".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                 }
-            }
-        }
-        let plan = plan.unwrap();
+            })?;
 
-        let db_tx = self.db.begin().await;
-        if let Err(e) = db_tx {
+        let mut db_tx = self.db.begin().await.map_err(|e| {
             tracing::error!("cannot begin db tx due to err: {}", e);
-            return Err(OrderError::Unexpected {
+            OrderError::Unexpected {
                 message: "cannot start transaction".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
-
-        let mut db_tx = db_tx.unwrap();
-        let order = self
+            }
+        })?;
+        let create_order_res = self
             .repo
             .create_order(
                 &mut db_tx,
@@ -165,17 +160,20 @@ impl Service {
                 },
             )
             .await;
-        if let Err(e) = order {
-            let _ = db_tx.rollback().await;
-            tracing::error!("cannot create order due to err: {}", e);
-            return Err(OrderError::Unexpected {
-                message: "cannot create order".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
-        let order = order.unwrap();
 
-        let payment = self
+        let order = match create_order_res {
+            Ok(o) => o,
+            Err(e) => {
+                let _ = db_tx.rollback().await;
+                tracing::error!("cannot create order due to err: {}", e);
+                return Err(OrderError::Unexpected {
+                    message: "cannot create order".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                });
+            }
+        };
+
+        let create_payment_res = self
             .payment_service
             .create_payment(
                 &mut db_tx,
@@ -188,24 +186,25 @@ impl Service {
             )
             .await;
 
-        if let Err(e) = payment {
-            let _ = db_tx.rollback().await;
-            tracing::error!("cannot create payment due to err: {}", e);
-            return Err(OrderError::Unexpected {
-                message: "cannot create payment".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
+        let payment = match create_payment_res {
+            Ok(p) => p,
+            Err(e) => {
+                let _ = db_tx.rollback().await;
+                tracing::error!("cannot create payment due to err: {}", e);
+                return Err(OrderError::Unexpected {
+                    message: "cannot create payment".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                });
+            }
+        };
 
-        let payment = payment.unwrap();
-        let commit_res = db_tx.commit().await;
-        if let Err(e) = commit_res {
+        db_tx.commit().await.map_err(|e| {
             tracing::error!("cannot commit db tx due to err: {}", e);
-            return Err(OrderError::Unexpected {
+            OrderError::Unexpected {
                 message: "cannot commit changes to db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
+            }
+        })?;
         let status = serde_json::to_string(&OrderStatus::Created).map_err(|e| {
             tracing::error!("cannot convert order status to string due to err: {}", e);
             OrderError::Unexpected {
@@ -228,29 +227,25 @@ impl Service {
         user: User,
         params: OrderDetailParams,
     ) -> Result<OrderDetailResult, OrderError> {
-        let conn = self.db.acquire().await;
-        if let Err(e) = conn {
-            tracing::error!(" cannot acquire db conn due to err: {}", e);
-            return Err(OrderError::Unexpected {
+        let mut conn = self.db.acquire().await.map_err(|e| {
+            tracing::error!("cannot acquire db conn due to err: {}", e);
+            OrderError::Unexpected {
                 message: "cannot get order from db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
-        let mut conn = conn.unwrap();
-        let order = self.repo.get_order_by_id(&mut conn, params.id).await;
-        if let Err(e) = order {
-            match e {
-                sqlx::Error::RowNotFound => return Err(OrderError::NotFound { id: params.id }),
-                _ => {
-                    tracing::error!(" cannot get_order_by_id due to err: {}", e);
-                    return Err(OrderError::Unexpected {
-                        message: "cannot get order from db".to_string(),
-                        source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-                    });
+            }
+        })?;
+
+        let order = self
+            .repo
+            .get_order_by_id(&mut conn, params.id)
+            .await
+            .map_err(|e| {
+                tracing::error!(" cannot get_order_by_id due to err: {}", e);
+                OrderError::Unexpected {
+                    message: "cannot get order from db".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
                 }
-            };
-        }
-        let order = order.unwrap();
+            })?;
         if order.user_id != user.id {
             return Err(OrderError::NotFound { id: params.id });
         }
@@ -361,7 +356,6 @@ impl Service {
     }
 
     pub async fn check_payment_and_finalize_order(
-        //TODO: handle all unwraps here
         &self,
         payment_id: i64,
     ) -> Result<(), OrderError> {
@@ -381,21 +375,26 @@ impl Service {
             return Ok(());
         }
 
-        let conn = self.db.acquire().await;
-        if let Err(e) = conn {
+        let mut conn = self.db.acquire().await.map_err(|e| {
             tracing::error!("cannot acquire db conn due to err: {}", e);
-            return Err(OrderError::Unexpected {
+            OrderError::Unexpected {
                 message: "cannot get order from db".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
-        let mut conn = conn.unwrap();
+            }
+        })?;
 
         let o = self
             .repo
             .get_order_by_id(&mut conn, check_payment.payment.order_id)
             .await
-            .unwrap();
+            .map_err(|e| {
+                tracing::error!("cannot get_order_by_id due to err: {}", e);
+                OrderError::Unexpected {
+                    message: "cannot get order from db".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
+            })?;
+
         match check_payment.status {
             PaymentStatus::Created => Ok(()),
             PaymentStatus::Failed => {

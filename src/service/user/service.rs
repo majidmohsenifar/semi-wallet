@@ -44,16 +44,14 @@ impl Service {
                     password: params.encrypted_password,
                 },
             )
-            .await;
-
-        if let Err(e) = user {
-            tracing::error!("cannot create_user due to err: {}", e);
-            return Err(UserError::Unexpected {
-                message: "cannot create user".to_string(),
-                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
-            });
-        }
-        let user = user.unwrap();
+            .await
+            .map_err(|e| {
+                tracing::error!("cannot create_user due to err: {}", e);
+                UserError::Unexpected {
+                    message: "cannot create user".to_string(),
+                    source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+                }
+            })?;
         Ok(CreateUserResult { id: user.id })
     }
 }
