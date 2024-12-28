@@ -1,14 +1,18 @@
-use crate::{config::Settings, handler::{self,api::middleware},  service::coin::{price_manager::PriceManager, price_storage::PriceStorage}};
+use crate::{
+    config::Settings,
+    handler::{self, api::middleware},
+    service::coin::{price_manager::PriceManager, price_storage::PriceStorage},
+};
 
 use axum::{
+    http::Method,
     middleware as axum_middleware,
     routing::{delete, get, patch, post},
-    Router, 
-    http::Method,
+    Router,
 };
 use std::sync::Arc;
 use tokio::{io, net::TcpListener, sync::RwLock};
-use tower_http::cors::{CorsLayer,Any};
+use tower_http::cors::{Any, CorsLayer};
 
 use crate::client::postgres;
 use crate::client::redis;
@@ -66,7 +70,7 @@ pub struct HttpServer {
     ),
     components(schemas(
         //aliases
-        crate::handler::api::response::ApiResponseCreateUserCoin, 
+        crate::handler::api::response::ApiResponseCreateUserCoin,
         crate::handler::api::response::ApiResponseUserCoinsList,
         crate::handler::api::response::ApiResponseLogin,
         crate::handler::api::response::ApiResponseRegister,
@@ -77,7 +81,6 @@ pub struct HttpServer {
         crate::handler::api::response::ApiResponseUserOrdersList,
         crate::handler::api::response::ApiResponsePaymentProvidersList,
         crate::handler::api::response::ApiResponseEmpty,
-
         crate::service::order::service::OrderDetailResult,
         crate::service::order::service::CreateOrderParams,
         crate::service::order::service::GetUserOrdersListParams,
@@ -123,8 +126,8 @@ impl HttpServer {
         //pub async fn run_server(cfg: Settings) {
         let repo = Repository::default();
         let db_pool = postgres::new_pg_pool(&cfg.db.dsn)
-        .await
-        .expect("cannot create db_pool");
+            .await
+            .expect("cannot create db_pool");
 
         let payment_service = PaymentService::new(
             db_pool.clone(),
@@ -145,11 +148,18 @@ impl HttpServer {
             cfg.stripe.secret,
         );
         let auth_service = AuthService::new(db_pool.clone(), user_service, cfg.jwt.secret);
-        let redis_client = redis::new_redis_client(cfg.redis).await.expect("cannot create redis client");
-        let price_storage=PriceStorage::new(redis_client);
-        let price_manager=PriceManager::new(price_storage);
-        let user_coin_service =
-            UserCoinService::new(db_pool.clone(), repo.clone(), coin_service.clone(),user_plan_service.clone(),price_manager);
+        let redis_client = redis::new_redis_client(cfg.redis)
+            .await
+            .expect("cannot create redis client");
+        let price_storage = PriceStorage::new(redis_client);
+        let price_manager = PriceManager::new(price_storage);
+        let user_coin_service = UserCoinService::new(
+            db_pool.clone(),
+            repo.clone(),
+            coin_service.clone(),
+            user_plan_service.clone(),
+            price_manager,
+        );
 
         let app_state = AppState {
             order_service,
@@ -196,7 +206,10 @@ pub async fn get_router(shared_state: SharedState) -> Router {
         ));
 
     let payments_routes = Router::new()
-        .route("/callback/stripe",post(handler::api::payment::handle_stripe_webhook))
+        .route(
+            "/callback/stripe",
+            post(handler::api::payment::handle_stripe_webhook),
+        )
         .route("/providers", get(handler::api::payment::payment_providers));
 
     let coin_routes = Router::new().route("/", get(handler::api::coin::coins_list));
@@ -227,14 +240,15 @@ pub async fn get_router(shared_state: SharedState) -> Router {
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .nest("/api/v1", api_routes)
         //.layer(TraceLayer::new_for_http()
-            ////.make_span_with(new_make_span)
-            //.on_failure(|error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
-            //tracing::error!("error: {}", error)
+        ////.make_span_with(new_make_span)
+        //.on_failure(|error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
+        //tracing::error!("error: {}", error)
         //}))
-        .layer(CorsLayer::new()
+        .layer(
+            CorsLayer::new()
                 .allow_origin(Any)
-                .allow_methods([Method::GET,Method::POST,Method::PATCH,Method::PUT])
-                .allow_headers(Any),//TODO: should we let Any header to be passed?
+                .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::PUT])
+                .allow_headers(Any), //TODO: should we let Any header to be passed?
         )
         .with_state(shared_state)
 }
