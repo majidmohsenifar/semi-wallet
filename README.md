@@ -8,6 +8,7 @@ having your seed phrases always with you. in this project you can register and b
 1. Clone the repository
 2. run docker-compose up -d
 3. create .env and copy the sample.env content into it
+4. run project using ```cargo run --bin ws``` // to get the coin prices from binance
 4. run project using ```cargo run --bin server```
 5. open the swagger in your browser ```http://127.0.0.1:8000/swagger-ui```
 
@@ -32,12 +33,7 @@ project contains only integration test placed in test module
 - run ```cargo test``` to run the tests
 
 ## TODO:
-- add coins to db using migration
 - check the validity of address in create-user-coin
 - handle the case when the user tries to add the same coin address twice
-- add http-server container to docker-compose
-- add cli container to docker-compose
-- add ws container to docker-compose
-- add sqlx migration container to docker-compose
 - remove unwrap calls
 - remove clone calls where ever it is possible

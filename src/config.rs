@@ -55,7 +55,6 @@ pub struct BinanceConfig {
 
 impl Settings {
     pub fn new() -> Result<Self, config::ConfigError> {
-        #[cfg(debug_assertions)]
         dotenv::dotenv().ok();
 
         let cfg = Config::builder()
