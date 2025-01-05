@@ -35,5 +35,13 @@ project contains only integration test placed in test module
 ## TODO:
 - check the validity of address in create-user-coin
 - handle the case when the user tries to add the same coin address twice
-- remove unwrap calls
 - remove clone calls where ever it is possible
+- unwraps must be removed from the following files 
+    - [] binance_price_provider.rs
+    - [] price_manager.rs
+    - [] price_storage.rs
+    - [] payment/service.rs
+    - [] stripe.rs
+    - [] user_coin/service.rs
+    - [] src/http_server.rs
+    - [] cmd/update_users_coins_amount.rs

@@ -35,7 +35,7 @@ impl EthHandler {
     }
 
     pub async fn get_balance(&self, addr: &str) -> Result<f64, BlockchainError> {
-        let addr = Address::from_hex(addr).unwrap();
+        let addr = Address::from_hex(addr).map_err(|_| BlockchainError::InvalidAddress)?;
         let b = self
             .provider
             .get_balance(addr)
@@ -56,8 +56,11 @@ impl EthHandler {
         addr: &str,
         decimals: u8,
     ) -> Result<f64, BlockchainError> {
-        let addr = Address::from_hex(addr).unwrap();
-        let contract_addr = Address::from_hex(contract_addr).unwrap();
+        let addr = Address::from_hex(addr).map_err(|_| BlockchainError::InvalidAddress)?;
+        let contract_addr = Address::from_hex(contract_addr).map_err(|e| BlockchainError::Unexpected {
+                message: "invalid contract addr".to_string(),
+                source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
+            })?;
         let contract = Token::new(contract_addr, &self.provider);
 
         let b = contract
