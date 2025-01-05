@@ -13,7 +13,6 @@ use crate::helpers::spawn_app;
 #[tokio::test]
 async fn update_coin_prices_using_binance_ws() {
     let app = spawn_app().await;
-    app.insert_coins().await;
     let coins = app
         .repo
         .get_not_null_price_pair_symbol_coins(&app.db)

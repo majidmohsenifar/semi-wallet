@@ -61,7 +61,7 @@ async fn register_invalid_inputs() {
 
     for (body, msg) in test_cases {
         let response = client
-            .post(&format!("{}/api/v1/auth/register", app.address))
+            .post(format!("{}/api/v1/auth/register", app.address))
             .json(&body)
             .send()
             .await
@@ -101,7 +101,7 @@ async fn register_email_already_taken() {
     ]);
     let client = reqwest::Client::new();
     let response = client
-        .post(&format!("{}/api/v1/auth/register", app.address))
+        .post(format!("{}/api/v1/auth/register", app.address))
         .json(&body)
         .send()
         .await
@@ -127,7 +127,7 @@ async fn register_successful() {
     ]);
     let client = reqwest::Client::new();
     let response = client
-        .post(&format!("{}/api/v1/auth/register", app.address))
+        .post(format!("{}/api/v1/auth/register", app.address))
         .json(&body)
         .send()
         .await
@@ -165,7 +165,7 @@ async fn login_invalid_inputs() {
 
     for (body, msg) in test_cases {
         let response = client
-            .post(&format!("{}/api/v1/auth/login", app.address))
+            .post(format!("{}/api/v1/auth/login", app.address))
             .json(&body)
             .send()
             .await
@@ -189,7 +189,7 @@ async fn login_invalid_credential_email_does_not_exist() {
     let email = "doesnotexist@test.test";
     let body = HashMap::from([("email", email), ("password", "12345678")]);
     let response = client
-        .post(&format!("{}/api/v1/auth/login", app.address))
+        .post(format!("{}/api/v1/auth/login", app.address))
         .json(&body)
         .send()
         .await
@@ -222,7 +222,7 @@ async fn login_invalid_credential_wrong_password() {
 
     let body = HashMap::from([("email", email), ("password", "wrong_wrong")]);
     let response = client
-        .post(&format!("{}/api/v1/auth/login", app.address))
+        .post(format!("{}/api/v1/auth/login", app.address))
         .json(&body)
         .send()
         .await
@@ -255,7 +255,7 @@ async fn login_successful() {
 
     let body = HashMap::from([("email", email), ("password", "12345678")]);
     let response = client
-        .post(&format!("{}/api/v1/auth/login", app.address))
+        .post(format!("{}/api/v1/auth/login", app.address))
         .json(&body)
         .send()
         .await

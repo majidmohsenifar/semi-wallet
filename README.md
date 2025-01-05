@@ -34,7 +34,6 @@ project contains only integration test placed in test module
 
 ## TODO:
 - check the validity of address in create-user-coin
-- handle the case when the user tries to add the same coin address twice
 - remove clone calls where ever it is possible
 - unwraps must be removed from the following files 
     - [] binance_price_provider.rs

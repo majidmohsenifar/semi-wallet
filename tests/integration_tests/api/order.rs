@@ -34,7 +34,7 @@ async fn create_order_without_token() {
         ("payment_provider", PAYMENT_PROVIDER_STRIPE),
     ]);
     let response = client
-        .post(&format!("{}/api/v1/orders/create", app.address))
+        .post(format!("{}/api/v1/orders/create", app.address))
         .json(&body)
         .send()
         .await
@@ -76,7 +76,7 @@ async fn create_order_invalid_inputs() {
 
     for (body, msg) in test_cases {
         let response = client
-            .post(&format!("{}/api/v1/orders/create", app.address))
+            .post(format!("{}/api/v1/orders/create", app.address))
             .bearer_auth(&token)
             .json(&body)
             .send()
@@ -124,7 +124,7 @@ async fn create_order_1_month_stripe_successful() {
         .await;
 
     let response = client
-        .post(&format!("{}/api/v1/orders/create", app.address))
+        .post(format!("{}/api/v1/orders/create", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()

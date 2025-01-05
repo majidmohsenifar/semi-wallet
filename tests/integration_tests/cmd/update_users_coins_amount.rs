@@ -39,7 +39,6 @@ use crate::helpers::{spawn_app, COINS};
 async fn update_users_coins_amount_without_args() {
     let app = spawn_app().await;
     let mut conn = app.db.acquire().await.unwrap();
-    app.insert_coins().await;
     let plan = app
         .repo
         .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
@@ -366,7 +365,6 @@ async fn update_users_coins_amount_without_args() {
 async fn update_users_coins_amount_with_user_id_args() {
     let app = spawn_app().await;
     let mut conn = app.db.acquire().await.unwrap();
-    app.insert_coins().await;
     let plan = app
         .repo
         .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
@@ -720,7 +718,6 @@ async fn update_users_coins_amount_with_user_id_args() {
 async fn update_users_coins_amount_with_symbol_args() {
     let app = spawn_app().await;
     let mut conn = app.db.acquire().await.unwrap();
-    app.insert_coins().await;
     let plan = app
         .repo
         .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
@@ -915,7 +912,6 @@ async fn update_users_coins_amount_with_symbol_args() {
 async fn update_users_coins_amount_with_symbol_and_network_args() {
     let app = spawn_app().await;
     let mut conn = app.db.acquire().await.unwrap();
-    app.insert_coins().await;
     let plan = app
         .repo
         .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
@@ -1148,7 +1144,6 @@ async fn update_users_coins_amount_with_symbol_and_network_args() {
 async fn update_users_coins_amount_with_user_id_and_symbol_and_network_args() {
     let app = spawn_app().await;
     let mut conn = app.db.acquire().await.unwrap();
-    app.insert_coins().await;
     let plan = app
         .repo
         .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)

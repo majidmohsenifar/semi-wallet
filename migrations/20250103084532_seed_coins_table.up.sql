@@ -11,7 +11,7 @@ INSERT INTO coins (
     contract_address,
     description) VALUES 
     (1, 'BTC', 'Bitcoin', '', 'BTC', 'BTC-USDT', 8, NULL, ''),
-    (2, 'ETH', 'Ethereum', '', 'BTC', 'ETH-USDT', 18, NULL, ''),
+    (2, 'ETH', 'Ethereum', '', 'ETH', 'ETH-USDT', 18, NULL, ''),
     (3, 'SOL', 'Solana', '', 'SOL', 'SOL-USDT', 9, NULL, ''),
     (4, 'TRX', 'Tron', '', 'TRX', 'TRX-USDT', 6, NULL, ''),
     (5, 'USDT', 'Tether', '', 'ETH', NULL, 6, '0xdAC17F958D2ee523a2206206994597C13D831ec7', ''),

@@ -13,7 +13,7 @@ async fn get_payment_providers_list_successful() {
     //we already have plans in our db as we done it in one of our migrations
     let client = reqwest::Client::new();
     let response = client
-        .get(&format!("{}/api/v1/payments/providers", app.address))
+        .get(format!("{}/api/v1/payments/providers", app.address))
         .send()
         .await
         .expect("failed to execute request");

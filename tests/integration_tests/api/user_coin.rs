@@ -5,6 +5,7 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use claims::{assert_gt, assert_none};
 use redis::{self, AsyncCommands};
 
+use semi_wallet::repository::user_coin::CreateUserCoinArgs;
 use semi_wallet::service::coin::price_storage::{PriceData, COIN_PRICE_REDIS_KEY_PREFIX};
 use semi_wallet::{
     handler::api::response::{ApiError, ApiResponse},
@@ -19,7 +20,7 @@ async fn get_user_coins_without_token() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let response = client
-        .get(&format!("{}/api/v1/user-coins", app.address))
+        .get(format!("{}/api/v1/user-coins", app.address))
         .send()
         .await
         .expect("failed to execute request");
@@ -35,8 +36,6 @@ async fn get_user_coins_without_token() {
 async fn get_user_coins_successful() {
     let app = spawn_app().await;
     let (token, user) = app.get_jwt_token_and_user("test@test.test").await;
-
-    app.insert_coins().await;
 
     let uc1 = app
         .create_user_coin(user.id, "BTC", "BTC", "btc_addr")
@@ -88,7 +87,7 @@ async fn get_user_coins_successful() {
 
     let client = reqwest::Client::new();
     let response = client
-        .get(&format!("{}/api/v1/user-coins", app.address))
+        .get(format!("{}/api/v1/user-coins", app.address))
         .bearer_auth(token)
         .send()
         .await
@@ -156,7 +155,7 @@ async fn create_user_coin_without_token() {
         ("network", "BTC"),
     ]);
     let response = client
-        .post(&format!("{}/api/v1/user-coins/create", app.address))
+        .post(format!("{}/api/v1/user-coins/create", app.address))
         .json(&body)
         .send()
         .await
@@ -196,7 +195,7 @@ async fn create_user_coin_invalid_inputs() {
 
     for (body, msg) in test_cases {
         let response = client
-            .post(&format!("{}/api/v1/user-coins/create", app.address))
+            .post(format!("{}/api/v1/user-coins/create", app.address))
             .bearer_auth(&token)
             .json(&body)
             .send()
@@ -220,7 +219,6 @@ async fn create_user_coin_coin_not_found() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
     let addr = "btc_addr_".repeat(4);
     let body = HashMap::from([
         ("address", &addr[..]),
@@ -228,7 +226,7 @@ async fn create_user_coin_coin_not_found() {
         ("network", "BTC"),
     ]);
     let response = client
-        .post(&format!("{}/api/v1/user-coins/create", app.address))
+        .post(format!("{}/api/v1/user-coins/create", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -249,7 +247,6 @@ async fn create_user_coin_user_plan_not_found() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
     let addr = "btc_addr_".repeat(4);
     let body = HashMap::from([
         ("address", &addr[..]),
@@ -257,7 +254,7 @@ async fn create_user_coin_user_plan_not_found() {
         ("network", "BTC"),
     ]);
     let response = client
-        .post(&format!("{}/api/v1/user-coins/create", app.address))
+        .post(format!("{}/api/v1/user-coins/create", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -278,7 +275,6 @@ async fn create_user_coin_expired_user_plan() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
 
     let plan = app
         .repo
@@ -322,7 +318,7 @@ async fn create_user_coin_expired_user_plan() {
         ("network", "BTC"),
     ]);
     let response = client
-        .post(&format!("{}/api/v1/user-coins/create", app.address))
+        .post(format!("{}/api/v1/user-coins/create", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -343,7 +339,6 @@ async fn create_user_coin_successful() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
 
     let plan = app
         .repo
@@ -387,7 +382,7 @@ async fn create_user_coin_successful() {
         ("network", "BTC"),
     ]);
     let response = client
-        .post(&format!("{}/api/v1/user-coins/create", app.address))
+        .post(format!("{}/api/v1/user-coins/create", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -409,6 +404,20 @@ async fn create_user_coin_successful() {
     assert_eq!(data.amount, None);
     assert_eq!(data.usd_value, None);
     assert_eq!(data.network, "BTC");
+
+    let user_coins = app
+        .repo
+        .get_user_coins_by_user_id(&app.db, user.id)
+        .await
+        .unwrap();
+    assert_eq!(user_coins.len(), 1);
+    assert_eq!(user_coins[0].user_id, user.id);
+    assert_eq!(user_coins[0].coin_id, 1);
+    assert_eq!(user_coins[0].address, "btc_addr_".repeat(4));
+    assert_eq!(user_coins[0].symbol, "BTC");
+    assert_eq!(user_coins[0].network, "BTC");
+    assert_none!(&user_coins[0].amount);
+    assert_none!(user_coins[0].amount_updated_at);
 }
 
 #[tokio::test]
@@ -416,7 +425,6 @@ async fn create_user_coin_network_not_set_successful() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
 
     let plan = app
         .repo
@@ -456,7 +464,7 @@ async fn create_user_coin_network_not_set_successful() {
     let addr = "btc_addr_".repeat(4);
     let body = HashMap::from([("address", &addr[..]), ("symbol", "BTC")]);
     let response = client
-        .post(&format!("{}/api/v1/user-coins/create", app.address))
+        .post(format!("{}/api/v1/user-coins/create", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -478,6 +486,20 @@ async fn create_user_coin_network_not_set_successful() {
     assert_eq!(data.amount, None);
     assert_eq!(data.usd_value, None);
     assert_eq!(data.network, "BTC");
+
+    let user_coins = app
+        .repo
+        .get_user_coins_by_user_id(&app.db, user.id)
+        .await
+        .unwrap();
+    assert_eq!(user_coins.len(), 1);
+    assert_eq!(user_coins[0].user_id, user.id);
+    assert_eq!(user_coins[0].coin_id, 1);
+    assert_eq!(user_coins[0].address, "btc_addr_".repeat(4));
+    assert_eq!(user_coins[0].symbol, "BTC");
+    assert_eq!(user_coins[0].network, "BTC");
+    assert_none!(&user_coins[0].amount);
+    assert_none!(user_coins[0].amount_updated_at);
 }
 
 #[tokio::test]
@@ -485,7 +507,6 @@ async fn create_user_coin_empty_network_set_successful() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
 
     let plan = app
         .repo
@@ -525,7 +546,7 @@ async fn create_user_coin_empty_network_set_successful() {
     let addr = "btc_addr_".repeat(4);
     let body = HashMap::from([("address", &addr[..]), ("symbol", "BTC"), ("network", " ")]);
     let response = client
-        .post(&format!("{}/api/v1/user-coins/create", app.address))
+        .post(format!("{}/api/v1/user-coins/create", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -547,6 +568,20 @@ async fn create_user_coin_empty_network_set_successful() {
     assert_eq!(data.amount, None);
     assert_eq!(data.usd_value, None);
     assert_eq!(data.network, "BTC");
+
+    let user_coins = app
+        .repo
+        .get_user_coins_by_user_id(&app.db, user.id)
+        .await
+        .unwrap();
+    assert_eq!(user_coins.len(), 1);
+    assert_eq!(user_coins[0].user_id, user.id);
+    assert_eq!(user_coins[0].coin_id, 1);
+    assert_eq!(user_coins[0].address, "btc_addr_".repeat(4));
+    assert_eq!(user_coins[0].symbol, "BTC");
+    assert_eq!(user_coins[0].network, "BTC");
+    assert_none!(&user_coins[0].amount);
+    assert_none!(user_coins[0].amount_updated_at);
 }
 
 #[tokio::test]
@@ -554,7 +589,6 @@ async fn create_user_coin_with_network_set_successful() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
 
     let plan = app
         .repo
@@ -598,7 +632,7 @@ async fn create_user_coin_with_network_set_successful() {
         ("network", "ETH"),
     ]);
     let response = client
-        .post(&format!("{}/api/v1/user-coins/create", app.address))
+        .post(format!("{}/api/v1/user-coins/create", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -620,6 +654,116 @@ async fn create_user_coin_with_network_set_successful() {
     assert_eq!(data.amount, None);
     assert_eq!(data.usd_value, None);
     assert_eq!(data.network, "ETH");
+
+    let user_coins = app
+        .repo
+        .get_user_coins_by_user_id(&app.db, user.id)
+        .await
+        .unwrap();
+    assert_eq!(user_coins.len(), 1);
+    assert_eq!(user_coins[0].user_id, user.id);
+    assert_eq!(user_coins[0].coin_id, 5);
+    assert_eq!(user_coins[0].address, "usdt_addr_".repeat(4));
+    assert_eq!(user_coins[0].symbol, "USDT");
+    assert_eq!(user_coins[0].network, "ETH");
+    assert_none!(&user_coins[0].amount);
+    assert_none!(user_coins[0].amount_updated_at);
+}
+
+#[tokio::test]
+async fn create_user_coin_with_network_set_already_exist_in_db_successful() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
+
+    let plan = app
+        .repo
+        .get_plan_by_code(&app.db, PLAN_CODE_1_MONTH)
+        .await
+        .unwrap();
+
+    let mut conn = app.db.acquire().await.unwrap();
+
+    let order = app
+        .repo
+        .create_order(
+            &mut conn,
+            semi_wallet::repository::order::CreateOrderArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                total: BigDecimal::from_f64(1.99).unwrap(),
+                status: OrderStatus::Completed,
+            },
+        )
+        .await
+        .unwrap();
+
+    app.repo
+        .create_user_plan_or_update_expires_at(
+            &mut conn,
+            CreateUserPlanOrUpdateExpiresAtArgs {
+                user_id: user.id,
+                plan_id: plan.id,
+                order_id: order.id,
+                days: 30,
+            },
+        )
+        .await
+        .unwrap();
+
+    //create user_coins
+    let already_existing_user_coin_id = app
+        .repo
+        .create_user_coin(
+            &app.db,
+            CreateUserCoinArgs {
+                user_id: user.id,
+                coin_id: 5,
+                symbol: "USDT",
+                network: "ETH",
+                address: "usdt_addr_".repeat(4).as_str(),
+            },
+        )
+        .await
+        .unwrap();
+
+    let addr = "usdt_addr_".repeat(4);
+    let body = HashMap::from([
+        ("address", &addr[..]),
+        ("symbol", "USDT"),
+        ("network", "ETH"),
+    ]);
+    let response = client
+        .post(format!("{}/api/v1/user-coins/create", app.address))
+        .bearer_auth(&token)
+        .json(&body)
+        .send()
+        .await
+        .expect("failed to call the api");
+    assert_eq!(
+        200,
+        response.status().as_u16(),
+        "the api status code is not 200 Ok",
+    );
+    let bytes = response.bytes().await.unwrap();
+    let res: ApiResponse<'_, UserCoin> = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(res.message, "");
+    let data = res.data.unwrap();
+    assert_eq!(data.id, already_existing_user_coin_id);
+    assert_eq!(data.coin_id, 5);
+    assert_eq!(data.address, "usdt_addr_".repeat(4));
+    assert_eq!(data.symbol, "USDT");
+    assert_eq!(data.amount, None);
+    assert_eq!(data.usd_value, None);
+    assert_eq!(data.network, "ETH");
+
+    let user_coins = app
+        .repo
+        .get_user_coins_by_user_id(&app.db, user.id)
+        .await
+        .unwrap();
+    assert_eq!(user_coins.len(), 1);
+    assert_eq!(user_coins[0].id, already_existing_user_coin_id);
 }
 
 #[tokio::test]
@@ -627,7 +771,6 @@ async fn delete_user_coin_invalid_inputs() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
 
     let test_cases: Vec<(HashMap<&str, &str>, &str)> = vec![
         (HashMap::new(), "id not set"),
@@ -636,7 +779,7 @@ async fn delete_user_coin_invalid_inputs() {
 
     for (body, scenario) in test_cases {
         let response = client
-            .delete(&format!("{}/api/v1/user-coins/delete", app.address))
+            .delete(format!("{}/api/v1/user-coins/delete", app.address))
             .bearer_auth(&token)
             .json(&body)
             .send()
@@ -656,10 +799,9 @@ async fn delete_user_coin_user_coin_not_found() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
     let body = HashMap::from([("id", 12)]);
     let response = client
-        .delete(&format!("{}/api/v1/user-coins/delete", app.address))
+        .delete(format!("{}/api/v1/user-coins/delete", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -681,7 +823,6 @@ async fn delete_user_coin_user_coin_does_not_belong_to_user() {
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
     let (_, other_user) = app.get_jwt_token_and_user("test2@test.com").await;
-    app.insert_coins().await;
 
     let user_coin_id = app
         .create_user_coin(other_user.id, "BTC", "BTC", "btc_addr")
@@ -689,7 +830,7 @@ async fn delete_user_coin_user_coin_does_not_belong_to_user() {
 
     let body = HashMap::from([("id", user_coin_id)]);
     let response = client
-        .delete(&format!("{}/api/v1/user-coins/delete", app.address))
+        .delete(format!("{}/api/v1/user-coins/delete", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -710,7 +851,6 @@ async fn delete_user_coin_successful() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
 
     let user_coin_id = app
         .create_user_coin(user.id, "BTC", "BTC", "btc_addr")
@@ -718,7 +858,7 @@ async fn delete_user_coin_successful() {
 
     let body = HashMap::from([("id", user_coin_id)]);
     let response = client
-        .delete(&format!("{}/api/v1/user-coins/delete", app.address))
+        .delete(format!("{}/api/v1/user-coins/delete", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -746,7 +886,6 @@ async fn update_user_coin_address_invalid_inputs() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
 
     let test_cases: Vec<(HashMap<&str, serde_json::Value>, &str)> = vec![
         (
@@ -775,7 +914,7 @@ async fn update_user_coin_address_invalid_inputs() {
 
     for (body, msg) in test_cases {
         let response = client
-            .patch(&format!("{}/api/v1/user-coins/update-address", app.address))
+            .patch(format!("{}/api/v1/user-coins/update-address", app.address))
             .bearer_auth(&token)
             .json(&body)
             .send()
@@ -798,14 +937,13 @@ async fn update_user_coin_address_not_found() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
     let body = HashMap::from([
         ("id", serde_json::Value::Number(serde_json::Number::from(2))),
         ("address", serde_json::Value::String("addr".to_string())),
     ]);
 
     let response = client
-        .patch(&format!("{}/api/v1/user-coins/update-address", app.address))
+        .patch(format!("{}/api/v1/user-coins/update-address", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -828,7 +966,6 @@ async fn update_user_coin_does_not_belong_to_user() {
     let client = reqwest::Client::new();
     let (token, _) = app.get_jwt_token_and_user("test@test.com").await;
     let (_, other_user) = app.get_jwt_token_and_user("test2@test.com").await;
-    app.insert_coins().await;
 
     let user_coin_id = app
         .create_user_coin(other_user.id, "BTC", "BTC", "btc_addr")
@@ -843,7 +980,7 @@ async fn update_user_coin_does_not_belong_to_user() {
     ]);
 
     let response = client
-        .patch(&format!("{}/api/v1/user-coins/update-address", app.address))
+        .patch(format!("{}/api/v1/user-coins/update-address", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()
@@ -865,7 +1002,6 @@ async fn update_user_coin_successful() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let (token, user) = app.get_jwt_token_and_user("test@test.com").await;
-    app.insert_coins().await;
 
     let user_coin_id = app
         .create_user_coin(user.id, "BTC", "BTC", "btc_addr")
@@ -883,7 +1019,7 @@ async fn update_user_coin_successful() {
     ]);
 
     let response = client
-        .patch(&format!("{}/api/v1/user-coins/update-address", app.address))
+        .patch(format!("{}/api/v1/user-coins/update-address", app.address))
         .bearer_auth(&token)
         .json(&body)
         .send()

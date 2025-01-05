@@ -57,7 +57,8 @@ impl EthHandler {
         decimals: u8,
     ) -> Result<f64, BlockchainError> {
         let addr = Address::from_hex(addr).map_err(|_| BlockchainError::InvalidAddress)?;
-        let contract_addr = Address::from_hex(contract_addr).map_err(|e| BlockchainError::Unexpected {
+        let contract_addr =
+            Address::from_hex(contract_addr).map_err(|e| BlockchainError::Unexpected {
                 message: "invalid contract addr".to_string(),
                 source: Box::new(e) as Box<dyn std::error::Error + Send + Sync>,
             })?;

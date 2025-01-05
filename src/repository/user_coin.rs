@@ -39,12 +39,10 @@ impl Repository {
                     coin_id,
                     address,
                     symbol,
-                    network,
-                    created_at,
-                    updated_at
+                    network
                 ) VALUES(
-                $1, $2, $3, $4, $5, NOW(),NOW()
-                ) RETURNING id",
+                $1, $2, $3, $4, $5
+                ) ON CONFLICT (user_id, coin_id, address, network) DO UPDATE SET coin_id = EXCLUDED.coin_id RETURNING id",
         )
         .bind(args.user_id)
         .bind(args.coin_id)

@@ -4,7 +4,7 @@ use redis::{self, Client};
 use semi_wallet::{
     http_server::HttpServer,
     repository::{
-        coin::CreateCoinArgs, db::Repository, models::Coin, models::User, user::CreateUserArgs,
+        db::Repository, models::Coin, models::User, user::CreateUserArgs,
         user_coin::CreateUserCoinArgs,
     },
     service::auth::jwt,
@@ -209,27 +209,6 @@ impl<'a> TestApp<'a> {
 
         let token = jwt::create_jwt(self.cfg.jwt.secret.as_bytes(), String::from(email)).unwrap();
         (token, user)
-    }
-
-    pub async fn insert_coins(&self) {
-        for (_, c) in COINS.iter() {
-            self.repo
-                .create_coin(
-                    &self.db,
-                    CreateCoinArgs {
-                        symbol: c.symbol.clone(),
-                        name: c.name.clone(),
-                        network: c.network.clone(),
-                        price_pair_symbol: c.price_pair_symbol.clone(),
-                        logo: c.logo.clone(),
-                        decimals: c.decimals,
-                        contract_address: c.contract_address.clone(),
-                        description: c.description.clone().unwrap(),
-                    },
-                )
-                .await
-                .unwrap();
-        }
     }
 
     pub async fn create_user_coin(

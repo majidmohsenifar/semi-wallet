@@ -10,6 +10,6 @@ CREATE TABLE IF NOT EXISTS users_coins (
     amount_updated_at TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(user_id, coin_id)
+    UNIQUE(user_id, coin_id, address, network)
 
 )

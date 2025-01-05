@@ -128,7 +128,7 @@ async fn stripe_webhook_still_created_first_time() {
     let client = reqwest::Client::new();
     //let body = HashMap::from([("s", "d"), ("t", "v")]);
     let response = client
-        .post(&format!("{}/api/v1/payments/callback/stripe", app.address))
+        .post(format!("{}/api/v1/payments/callback/stripe", app.address))
         .header("Stripe-Signature", stripe_signature_header)
         .body(data)
         .send()
@@ -259,7 +259,7 @@ async fn stripe_webhook_expired() {
     let client = reqwest::Client::new();
     //let body = HashMap::from([("s", "d"), ("t", "v")]);
     let response = client
-        .post(&format!("{}/api/v1/payments/callback/stripe", app.address))
+        .post(format!("{}/api/v1/payments/callback/stripe", app.address))
         .header("Stripe-Signature", stripe_signature_header)
         .body(data)
         .send()
@@ -389,7 +389,7 @@ async fn stripe_webhook_completed_first_time() {
     let client = reqwest::Client::new();
     //let body = HashMap::from([("s", "d"), ("t", "v")]);
     let response = client
-        .post(&format!("{}/api/v1/payments/callback/stripe", app.address))
+        .post(format!("{}/api/v1/payments/callback/stripe", app.address))
         .header("Stripe-Signature", stripe_signature_header)
         .body(data)
         .send()
@@ -552,7 +552,7 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan() {
     let client = reqwest::Client::new();
     //let body = HashMap::from([("s", "d"), ("t", "v")]);
     let response = client
-        .post(&format!("{}/api/v1/payments/callback/stripe", app.address))
+        .post(format!("{}/api/v1/payments/callback/stripe", app.address))
         .header("Stripe-Signature", stripe_signature_header)
         .body(data)
         .send()
@@ -721,7 +721,7 @@ async fn stripe_webhook_completed_already_has_non_expired_1_month_user_plan_buys
     let client = reqwest::Client::new();
     //let body = HashMap::from([("s", "d"), ("t", "v")]);
     let response = client
-        .post(&format!("{}/api/v1/payments/callback/stripe", app.address))
+        .post(format!("{}/api/v1/payments/callback/stripe", app.address))
         .header("Stripe-Signature", stripe_signature_header)
         .body(data)
         .send()
@@ -890,7 +890,7 @@ async fn stripe_webhook_completed_already_has_old_expired_1_month_user_plan_buys
     let client = reqwest::Client::new();
     //let body = HashMap::from([("s", "d"), ("t", "v")]);
     let response = client
-        .post(&format!("{}/api/v1/payments/callback/stripe", app.address))
+        .post(format!("{}/api/v1/payments/callback/stripe", app.address))
         .header("Stripe-Signature", stripe_signature_header)
         .body(data)
         .send()
