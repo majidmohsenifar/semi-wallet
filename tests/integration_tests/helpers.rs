@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::{collections::{BTreeMap, HashMap}, sync::LazyLock};
 
 use redis::{self, Client};
 use semi_wallet::{
@@ -16,11 +16,10 @@ use uuid::Uuid;
 use semi_wallet::service::auth::bcrypt;
 use semi_wallet::{client::postgres, config};
 
-use once_cell::sync::Lazy;
 use wiremock::MockServer;
 use ws_mock::ws_mock_server::WsMockServer;
 
-static TRACING: Lazy<()> = Lazy::new(|| {
+static TRACING: LazyLock<()> = LazyLock::new(|| {
     let default_filter_level = "info".to_string();
     let subscriber_name = "test".to_string();
     // We cannot assign the output of `get_subscriber` to a variable based on the value of `TEST_LOG`
@@ -35,7 +34,7 @@ static TRACING: Lazy<()> = Lazy::new(|| {
     };
 });
 
-pub static COINS: Lazy<BTreeMap<&'static str, Coin>> = Lazy::new(|| {
+pub static COINS: LazyLock<BTreeMap<&'static str, Coin>> = LazyLock::new(|| {
     BTreeMap::from([
         (
             "BTC",
@@ -136,8 +135,8 @@ pub struct TestApp<'a> {
 }
 
 pub async fn spawn_app<'a>() -> TestApp<'a> {
-    Lazy::force(&TRACING);
-    Lazy::force(&COINS);
+    LazyLock::force(&TRACING);
+    LazyLock::force(&COINS);
 
     let stripe_server = MockServer::start().await;
     let btc_node = MockServer::start().await;
